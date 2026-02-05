@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="utf-8"?>
+<restrictions xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- ==================== -->
+    <!-- App Identity         -->
+    <!-- ==================== -->
+    <restriction
+        android:key="FortDesk"
+        android:title="FortDesk"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <!-- ==================== -->
+    <!-- Server Configuration -->
+    <!-- ==================== -->
+    <restriction
+        android:key="custom_rendezvous_server"
+        android:title="Rendezvous Server"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="api_server"
+        android:title="API Server"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="relay_server"
+        android:title="Relay Server"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="server_key"
+        android:title="Server Key"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <!-- ==================== -->
+    <!-- Security Settings    -->
+    <!-- ==================== -->
+    <restriction
+        android:key="hardcoded_password"
+        android:title="Hardcoded Password"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="verification_method"
+        android:title="Verification Method"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="approve_mode"
+        android:title="Approve Mode"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="access_mode"
+        android:title="Access Mode"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="whitelist"
+        android:title="Whitelist"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <!-- ==================== -->
+    <!-- Permission Controls  -->
+    <!-- ==================== -->
+    <restriction
+        android:key="enable_keyboard"
+        android:title="Enable Keyboard"
+        android:restrictionType="bool"
+        android:defaultValue="true" />
+
+    <restriction
+        android:key="enable_clipboard"
+        android:title="Enable Clipboard"
+        android:restrictionType="bool"
+        android:defaultValue="true" />
+
+    <restriction
+        android:key="enable_file_transfer"
+        android:title="Enable File Transfer"
+        android:restrictionType="bool"
+        android:defaultValue="true" />
+
+    <restriction
+        android:key="enable_audio"
+        android:title="Enable Audio"
+        android:restrictionType="bool"
+        android:defaultValue="true" />
+
+    <restriction
+        android:key="enable_tunnel"
+        android:title="Enable TCP Tunneling"
+        android:restrictionType="bool"
+        android:defaultValue="true" />
+
+    <restriction
+        android:key="enable_remote_restart"
+        android:title="Enable Remote Restart"
+        android:restrictionType="bool"
+        android:defaultValue="true" />
+
+    <restriction
+        android:key="enable_record_session"
+        android:title="Enable Session Recording"
+        android:restrictionType="bool"
+        android:defaultValue="true" />
+
+    <restriction
+        android:key="enable_block_input"
+        android:title="Enable Block Input"
+        android:restrictionType="bool"
+        android:defaultValue="true" />
+
+    <restriction
+        android:key="enable_lan_discovery"
+        android:title="Enable LAN Discovery"
+        android:restrictionType="bool"
+        android:defaultValue="true" />
+
+    <restriction
+        android:key="allow_remote_config_modification"
+        android:title="Allow Remote Config Modification"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <!-- ==================== -->
+    <!-- Display Settings     -->
+    <!-- ==================== -->
+    <restriction
+        android:key="view_only"
+        android:title="View Only Mode"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="show_cursor"
+        android:title="Show Remote Cursor"
+        android:restrictionType="bool"
+        android:defaultValue="true" />
+
+    <restriction
+        android:key="show_quality_monitor"
+        android:title="Show Quality Monitor"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="disable_audio"
+        android:title="Disable Audio"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="disable_clipboard"
+        android:title="Disable Clipboard"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="lock_after_session_end"
+        android:title="Lock After Session End"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="privacy_mode"
+        android:title="Privacy Mode"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="image_quality"
+        android:title="Image Quality"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="view_style"
+        android:title="View Style"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <!-- ==================== -->
+    <!-- Local Settings       -->
+    <!-- ==================== -->
+    <restriction
+        android:key="theme"
+        android:title="Theme"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="lang"
+        android:title="Language"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="disable_floating_window"
+        android:title="Disable Floating Window"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="keep_screen_on"
+        android:title="Keep Screen On"
+        android:restrictionType="bool"
+        android:defaultValue="true" />
+
+    <!-- ==================== -->
+    <!-- Built-in Settings    -->
+    <!-- ==================== -->
+    <restriction
+        android:key="display_name"
+        android:title="Display Name"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="preset_username"
+        android:title="Preset Username"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="preset_strategy_name"
+        android:title="Preset Strategy Name"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="preset_device_group_name"
+        android:title="Preset Device Group Name"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="hide_security_settings"
+        android:title="Hide Security Settings"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="hide_network_settings"
+        android:title="Hide Network Settings"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="hide_server_settings"
+        android:title="Hide Server Settings"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="disable_change_permanent_password"
+        android:title="Disable Change Permanent Password"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="disable_change_id"
+        android:title="Disable Change ID"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <!-- ==================== -->
+    <!-- Advanced / Override  -->
+    <!-- ==================== -->
+    <restriction
+        android:key="allow_auto_disconnect"
+        android:title="Allow Auto Disconnect"
+        android:restrictionType="bool"
+        android:defaultValue="true" />
+
+    <restriction
+        android:key="auto_disconnect_timeout"
+        android:title="Auto Disconnect Timeout"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="direct_server"
+        android:title="Direct Server"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="direct_access_port"
+        android:title="Direct Access Port"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+</restrictions>

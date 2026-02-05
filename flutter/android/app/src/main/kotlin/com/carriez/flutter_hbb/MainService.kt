@@ -16,6 +16,7 @@ import android.app.PendingIntent.FLAG_IMMUTABLE
 import android.app.PendingIntent.FLAG_UPDATE_CURRENT
 import android.content.Context
 import android.content.Intent
+import android.content.RestrictionsManager
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -228,6 +229,214 @@ class MainService : Service() {
     private lateinit var notificationChannel: String
     private lateinit var notificationBuilder: NotificationCompat.Builder
 
+    /**
+     * Get MDM managed configuration from RestrictionsManager.
+     * This reads configuration pushed via MDM console.
+     */
+    private fun getMdmConfiguration(): String {
+        return try {
+            val restrictionsManager = getSystemService(Context.RESTRICTIONS_SERVICE) as? RestrictionsManager
+            val restrictions = restrictionsManager?.applicationRestrictions
+            if (restrictions == null || restrictions.isEmpty) {
+                Log.d(logTag, "No MDM restrictions found")
+                ""
+            } else {
+                Log.d(logTag, "MDM restrictions found, building configuration")
+                buildConfigFromRestrictions(restrictions)
+            }
+        } catch (e: Exception) {
+            Log.e(logTag, "Error reading MDM configuration: ${e.message}")
+            ""
+        }
+    }
+
+    /**
+     * Build JSON configuration from MDM restrictions bundle.
+     * Format matches the custom client config expected by read_custom_client().
+     */
+    private fun buildConfigFromRestrictions(restrictions: Bundle): String {
+        val config = JSONObject()
+        val defaultSettings = JSONObject()
+        val overrideSettings = JSONObject()
+        val builtinSettings = JSONObject()
+
+        return try {
+            // App name (goes to top level)
+            restrictions.getString("app_name")?.takeIf { it.isNotEmpty() }?.let {
+                config.put("app-name", it)
+            }
+
+            // Hardcoded password (goes to top level as HARD_SETTINGS)
+            restrictions.getString("hardcoded_password")?.takeIf { it.isNotEmpty() }?.let {
+                config.put("password", it)
+            }
+
+            // === Server Configuration (default-settings) ===
+            restrictions.getString("custom_rendezvous_server")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("custom-rendezvous-server", it)
+            }
+            restrictions.getString("api_server")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("api-server", it)
+            }
+            restrictions.getString("relay_server")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("relay-server", it)
+            }
+            restrictions.getString("server_key")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("key", it)
+            }
+
+            // === Security Settings (default-settings) ===
+            restrictions.getString("verification_method")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("verification-method", it)
+            }
+            restrictions.getString("approve_mode")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("approve-mode", it)
+            }
+            restrictions.getString("access_mode")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("access-mode", it)
+            }
+            restrictions.getString("whitelist")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("whitelist", it)
+            }
+
+            // === Permission Controls (default-settings, Y/N format) ===
+            if (restrictions.containsKey("enable_keyboard")) {
+                defaultSettings.put("enable-keyboard", if (restrictions.getBoolean("enable_keyboard", true)) "Y" else "N")
+            }
+            if (restrictions.containsKey("enable_clipboard")) {
+                defaultSettings.put("enable-clipboard", if (restrictions.getBoolean("enable_clipboard", true)) "Y" else "N")
+            }
+            if (restrictions.containsKey("enable_file_transfer")) {
+                defaultSettings.put("enable-file-transfer", if (restrictions.getBoolean("enable_file_transfer", true)) "Y" else "N")
+            }
+            if (restrictions.containsKey("enable_audio")) {
+                defaultSettings.put("enable-audio", if (restrictions.getBoolean("enable_audio", true)) "Y" else "N")
+            }
+            if (restrictions.containsKey("enable_tunnel")) {
+                defaultSettings.put("enable-tunnel", if (restrictions.getBoolean("enable_tunnel", true)) "Y" else "N")
+            }
+            if (restrictions.containsKey("enable_remote_restart")) {
+                defaultSettings.put("enable-remote-restart", if (restrictions.getBoolean("enable_remote_restart", true)) "Y" else "N")
+            }
+            if (restrictions.containsKey("enable_record_session")) {
+                defaultSettings.put("enable-record-session", if (restrictions.getBoolean("enable_record_session", true)) "Y" else "N")
+            }
+            if (restrictions.containsKey("enable_block_input")) {
+                defaultSettings.put("enable-block-input", if (restrictions.getBoolean("enable_block_input", true)) "Y" else "N")
+            }
+            if (restrictions.containsKey("enable_lan_discovery")) {
+                defaultSettings.put("enable-lan-discovery", if (restrictions.getBoolean("enable_lan_discovery", true)) "Y" else "N")
+            }
+            if (restrictions.containsKey("allow_remote_config_modification")) {
+                defaultSettings.put("allow-remote-config-modification", if (restrictions.getBoolean("allow_remote_config_modification", false)) "Y" else "N")
+            }
+
+            // === Display Settings (default-settings) ===
+            if (restrictions.containsKey("view_only")) {
+                defaultSettings.put("view-only", if (restrictions.getBoolean("view_only", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("show_remote_cursor")) {
+                defaultSettings.put("show-remote-cursor", if (restrictions.getBoolean("show_remote_cursor", true)) "Y" else "N")
+            }
+            if (restrictions.containsKey("show_quality_monitor")) {
+                defaultSettings.put("show-quality-monitor", if (restrictions.getBoolean("show_quality_monitor", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("disable_audio")) {
+                defaultSettings.put("disable-audio", if (restrictions.getBoolean("disable_audio", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("disable_clipboard")) {
+                defaultSettings.put("disable-clipboard", if (restrictions.getBoolean("disable_clipboard", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("lock_after_session_end")) {
+                defaultSettings.put("lock-after-session-end", if (restrictions.getBoolean("lock_after_session_end", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("privacy_mode")) {
+                defaultSettings.put("privacy-mode", if (restrictions.getBoolean("privacy_mode", false)) "Y" else "N")
+            }
+            restrictions.getString("image_quality")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("image-quality", it)
+            }
+            restrictions.getString("view_style")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("view-style", it)
+            }
+
+            // === Local Settings (default-settings) ===
+            restrictions.getString("theme")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("theme", it)
+            }
+            restrictions.getString("lang")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("lang", it)
+            }
+            if (restrictions.containsKey("disable_floating_window")) {
+                defaultSettings.put("disable-floating-window", if (restrictions.getBoolean("disable_floating_window", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("keep_screen_on")) {
+                defaultSettings.put("keep-screen-on", if (restrictions.getBoolean("keep_screen_on", true)) "Y" else "N")
+            }
+
+            // === Built-in Settings (default-settings) ===
+            restrictions.getString("display_name")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("display-name", it)
+            }
+            restrictions.getString("preset_username")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("preset-username", it)
+            }
+            restrictions.getString("preset_strategy_name")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("preset-strategy-name", it)
+            }
+            restrictions.getString("preset_device_group_name")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("preset-device-group-name", it)
+            }
+            if (restrictions.containsKey("hide_security_settings")) {
+                defaultSettings.put("hide-security-settings", if (restrictions.getBoolean("hide_security_settings", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("hide_network_settings")) {
+                defaultSettings.put("hide-network-settings", if (restrictions.getBoolean("hide_network_settings", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("hide_server_settings")) {
+                defaultSettings.put("hide-server-settings", if (restrictions.getBoolean("hide_server_settings", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("disable_change_permanent_password")) {
+                defaultSettings.put("disable-change-permanent-password", if (restrictions.getBoolean("disable_change_permanent_password", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("disable_change_id")) {
+                defaultSettings.put("disable-change-id", if (restrictions.getBoolean("disable_change_id", false)) "Y" else "N")
+            }
+
+            // === Override Settings (override-settings) ===
+            // These settings override user preferences
+            if (restrictions.containsKey("allow_auto_disconnect")) {
+                overrideSettings.put("allow-auto-disconnect", if (restrictions.getBoolean("allow_auto_disconnect", true)) "Y" else "N")
+            }
+            restrictions.getString("auto_disconnect_timeout")?.takeIf { it.isNotEmpty() }?.let {
+                overrideSettings.put("auto-disconnect-timeout", it)
+            }
+            restrictions.getString("direct_server")?.takeIf { it.isNotEmpty() }?.let {
+                overrideSettings.put("direct-server", it)
+            }
+            restrictions.getString("direct_access_port")?.takeIf { it.isNotEmpty() }?.let {
+                overrideSettings.put("direct-access-port", it)
+            }
+
+            // Add settings objects to config if they have content
+            if (defaultSettings.length() > 0) {
+                config.put("default-settings", defaultSettings)
+            }
+            if (overrideSettings.length() > 0) {
+                config.put("override-settings", overrideSettings)
+            }
+
+            val result = if (config.length() > 0) config.toString() else ""
+            if (result.isNotEmpty()) {
+                Log.d(logTag, "MDM configuration built: $result")
+            }
+            result
+        } catch (e: JSONException) {
+            Log.e(logTag, "Error building MDM config JSON: ${e.message}")
+            ""
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         Log.d(logTag,"MainService onCreate, sdk int:${Build.VERSION.SDK_INT} reuseVirtualDisplay:$reuseVirtualDisplay")
@@ -243,7 +452,10 @@ class MainService : Service() {
         // keep the config dir same with flutter
         val prefs = applicationContext.getSharedPreferences(KEY_SHARED_PREFERENCES, FlutterActivity.MODE_PRIVATE)
         val configPath = prefs.getString(KEY_APP_DIR_CONFIG_PATH, "") ?: ""
-        FFI.startServer(configPath, "")
+        
+        // Get MDM managed configuration if available
+        val mdmConfig = getMdmConfiguration()
+        FFI.startServer(configPath, mdmConfig)
 
         createForegroundNotification()
     }

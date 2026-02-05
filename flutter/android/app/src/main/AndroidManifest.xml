@@ -90,6 +90,11 @@
             android:enabled="true"
             android:foregroundServiceType="mediaProjection" />
 
+        <!-- MDM Managed Configurations -->
+        <meta-data
+            android:name="android.content.APP_RESTRICTIONS"
+            android:resource="@xml/app_restrictions" />
+
         <service
             android:name=".FloatingWindowService"
             android:enabled="true" />

@@ -1886,21 +1886,21 @@ pub fn get_dst_align_rgba() -> usize {
 }
 
 pub fn read_custom_client(config: &str) {
-    let Ok(data) = decode64(config) else {
-        log::error!("Failed to decode custom client config");
-        return;
-    };
-    const KEY: &str = "5Qbwsde3unUcJBtrx9ZkvUmwFNoExHzpryHuPUdqlWM=";
-    let Some(pk) = get_rs_pk(KEY) else {
-        log::error!("Failed to parse public key of custom client");
-        return;
-    };
-    let Ok(data) = sign::verify(&data, &pk) else {
-        log::error!("Failed to dec custom client config");
-        return;
-    };
+    // let Ok(data) = decode64(config) else {
+    //     log::error!("Failed to decode custom client config");
+    //     return;
+    // };
+    // const KEY: &str = "5Qbwsde3unUcJBtrx9ZkvUmwFNoExHzpryHuPUdqlWM=";
+    // let Some(pk) = get_rs_pk(KEY) else {
+    //     log::error!("Failed to parse public key of custom client");
+    //     return;
+    // };
+    // let Ok(data) = sign::verify(&data, &pk) else {
+    //     log::error!("Failed to dec custom client config");
+    //     return;
+    // };
     let Ok(mut data) =
-        serde_json::from_slice::<std::collections::HashMap<String, serde_json::Value>>(&data)
+        serde_json::from_str::<std::collections::HashMap<String, serde_json::Value>>(config)
     else {
         log::error!("Failed to parse custom client config");
         return;

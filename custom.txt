@@ -1,0 +1,71 @@
+{
+  "app-name": "FortDesk",
+  "default-settings": {
+    "custom-rendezvous-server": "192.168.88.33",
+    "api-server": "",
+    "key": "yUWpQGdCedDRxAGUBuNzpeDzphpfTSeW9zFYr28Uooo=",
+    "enable-keyboard": "Y",
+    "enable-clipboard": "Y",
+    "enable-file-transfer": "Y",
+    "enable-audio": "Y",
+    "theme": "dark",
+    "lang": "en",
+    "access-mode": "view",
+    "hide-security-settings": "Y",
+    "hide-network-settings": "Y",
+    "hide-server-settings": "Y",
+    "hide-proxy-settings": "Y",
+    "hide-websocket-settings": "Y",
+    "hide-remote-printer-settings": "Y",
+    "hide-username-on-card": "Y",
+    "hide-help-cards": "Y",
+    "disable-group-panel": "Y",
+    "disable-discovery-panel": "Y",
+    "allow-numeric-one-time-password": "Y",
+    "temporary-password-length": "6",
+    "disable-change-permanent-password":"Y",
+    "default-connect-password":"123456"
+  },
+  "override-settings": {
+    "disable-audio": "N",
+    "allow-auto-disconnect": "N",
+    "allow-numeric-one-time-password": "Y",
+    "temporary-password-length": "6"
+  },
+  "password": "123456"
+}{
+  "app-name": "FortDesk",
+  "default-settings": {
+    "custom-rendezvous-server": "192.168.88.33",
+    "api-server": "",
+    "key": "yUWpQGdCedDRxAGUBuNzpeDzphpfTSeW9zFYr28Uooo=",
+    "enable-keyboard": "Y",
+    "enable-clipboard": "Y",
+    "enable-file-transfer": "Y",
+    "enable-audio": "Y",
+    "theme": "dark",
+    "lang": "en",
+    "access-mode": "view",
+    "hide-security-settings": "Y",
+    "hide-network-settings": "Y",
+    "hide-server-settings": "Y",
+    "hide-proxy-settings": "Y",
+    "hide-websocket-settings": "Y",
+    "hide-remote-printer-settings": "Y",
+    "hide-username-on-card": "Y",
+    "hide-help-cards": "Y",
+    "disable-group-panel": "Y",
+    "disable-discovery-panel": "Y",
+    "allow-numeric-one-time-password": "Y",
+    "temporary-password-length": "6",
+    "disable-change-permanent-password":"Y",
+    "default-connect-password":"123456"
+  },
+  "override-settings": {
+    "disable-audio": "N",
+    "allow-auto-disconnect": "N",
+    "allow-numeric-one-time-password": "Y",
+    "temporary-password-length": "6"
+  },
+  "password": "123456"
+}
