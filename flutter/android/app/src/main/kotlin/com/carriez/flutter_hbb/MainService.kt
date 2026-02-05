@@ -258,20 +258,21 @@ class MainService : Service() {
         val config = JSONObject()
         val defaultSettings = JSONObject()
         val overrideSettings = JSONObject()
-        val builtinSettings = JSONObject()
 
         return try {
-            // App name (goes to top level)
+            // ========================================
+            // Top-Level Settings (HARD_SETTINGS)
+            // ========================================
             restrictions.getString("app_name")?.takeIf { it.isNotEmpty() }?.let {
                 config.put("app-name", it)
             }
-
-            // Hardcoded password (goes to top level as HARD_SETTINGS)
             restrictions.getString("hardcoded_password")?.takeIf { it.isNotEmpty() }?.let {
                 config.put("password", it)
             }
 
-            // === Server Configuration (default-settings) ===
+            // ========================================
+            // Server Configuration
+            // ========================================
             restrictions.getString("custom_rendezvous_server")?.takeIf { it.isNotEmpty() }?.let {
                 defaultSettings.put("custom-rendezvous-server", it)
             }
@@ -284,22 +285,53 @@ class MainService : Service() {
             restrictions.getString("server_key")?.takeIf { it.isNotEmpty() }?.let {
                 defaultSettings.put("key", it)
             }
+            if (restrictions.containsKey("allow_websocket")) {
+                defaultSettings.put("allow-websocket", if (restrictions.getBoolean("allow_websocket", false)) "Y" else "N")
+            }
+            restrictions.getString("ice_servers")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("ice-servers", it)
+            }
+            restrictions.getString("direct_server")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("direct-server", it)
+            }
+            restrictions.getString("direct_access_port")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("direct-access-port", it)
+            }
+            if (restrictions.containsKey("disable_udp")) {
+                defaultSettings.put("disable-udp", if (restrictions.getBoolean("disable_udp", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("allow_insecure_tls_fallback")) {
+                defaultSettings.put("allow-insecure-tls-fallback", if (restrictions.getBoolean("allow_insecure_tls_fallback", false)) "Y" else "N")
+            }
 
-            // === Security Settings (default-settings) ===
-            restrictions.getString("verification_method")?.takeIf { it.isNotEmpty() }?.let {
-                defaultSettings.put("verification-method", it)
+            // ========================================
+            // Security & Access Settings
+            // ========================================
+            restrictions.getString("access_mode")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("access-mode", it)
             }
             restrictions.getString("approve_mode")?.takeIf { it.isNotEmpty() }?.let {
                 defaultSettings.put("approve-mode", it)
             }
-            restrictions.getString("access_mode")?.takeIf { it.isNotEmpty() }?.let {
-                defaultSettings.put("access-mode", it)
+            restrictions.getString("verification_method")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("verification-method", it)
             }
             restrictions.getString("whitelist")?.takeIf { it.isNotEmpty() }?.let {
                 defaultSettings.put("whitelist", it)
             }
+            restrictions.getString("temporary_password_length")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("temporary-password-length", it)
+            }
+            if (restrictions.containsKey("allow_numeric_one_time_password")) {
+                defaultSettings.put("allow-numeric-one-time-password", if (restrictions.getBoolean("allow_numeric_one_time_password", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("enable_trusted_devices")) {
+                defaultSettings.put("enable-trusted-devices", if (restrictions.getBoolean("enable_trusted_devices", false)) "Y" else "N")
+            }
 
-            // === Permission Controls (default-settings, Y/N format) ===
+            // ========================================
+            // Permission Controls (KEYS_SETTINGS)
+            // ========================================
             if (restrictions.containsKey("enable_keyboard")) {
                 defaultSettings.put("enable-keyboard", if (restrictions.getBoolean("enable_keyboard", true)) "Y" else "N")
             }
@@ -308,6 +340,15 @@ class MainService : Service() {
             }
             if (restrictions.containsKey("enable_file_transfer")) {
                 defaultSettings.put("enable-file-transfer", if (restrictions.getBoolean("enable_file_transfer", true)) "Y" else "N")
+            }
+            if (restrictions.containsKey("enable_camera")) {
+                defaultSettings.put("enable-camera", if (restrictions.getBoolean("enable_camera", true)) "Y" else "N")
+            }
+            if (restrictions.containsKey("enable_terminal")) {
+                defaultSettings.put("enable-terminal", if (restrictions.getBoolean("enable_terminal", true)) "Y" else "N")
+            }
+            if (restrictions.containsKey("enable_remote_printer")) {
+                defaultSettings.put("enable-remote-printer", if (restrictions.getBoolean("enable_remote_printer", true)) "Y" else "N")
             }
             if (restrictions.containsKey("enable_audio")) {
                 defaultSettings.put("enable-audio", if (restrictions.getBoolean("enable_audio", true)) "Y" else "N")
@@ -324,25 +365,78 @@ class MainService : Service() {
             if (restrictions.containsKey("enable_block_input")) {
                 defaultSettings.put("enable-block-input", if (restrictions.getBoolean("enable_block_input", true)) "Y" else "N")
             }
-            if (restrictions.containsKey("enable_lan_discovery")) {
-                defaultSettings.put("enable-lan-discovery", if (restrictions.getBoolean("enable_lan_discovery", true)) "Y" else "N")
-            }
             if (restrictions.containsKey("allow_remote_config_modification")) {
                 defaultSettings.put("allow-remote-config-modification", if (restrictions.getBoolean("allow_remote_config_modification", false)) "Y" else "N")
             }
+            if (restrictions.containsKey("enable_lan_discovery")) {
+                defaultSettings.put("enable-lan-discovery", if (restrictions.getBoolean("enable_lan_discovery", true)) "Y" else "N")
+            }
+            if (restrictions.containsKey("allow_auto_disconnect")) {
+                defaultSettings.put("allow-auto-disconnect", if (restrictions.getBoolean("allow_auto_disconnect", true)) "Y" else "N")
+            }
+            restrictions.getString("auto_disconnect_timeout")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("auto-disconnect-timeout", it)
+            }
+            if (restrictions.containsKey("allow_only_conn_window_open")) {
+                defaultSettings.put("allow-only-conn-window-open", if (restrictions.getBoolean("allow_only_conn_window_open", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("allow_auto_record_incoming")) {
+                defaultSettings.put("allow-auto-record-incoming", if (restrictions.getBoolean("allow_auto_record_incoming", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("allow_auto_record_outgoing")) {
+                defaultSettings.put("allow-auto-record-outgoing", if (restrictions.getBoolean("allow_auto_record_outgoing", false)) "Y" else "N")
+            }
+            restrictions.getString("video_save_directory")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("video-save-directory", it)
+            }
+            if (restrictions.containsKey("enable_abr")) {
+                defaultSettings.put("enable-abr", if (restrictions.getBoolean("enable_abr", true)) "Y" else "N")
+            }
+            if (restrictions.containsKey("allow_remove_wallpaper")) {
+                defaultSettings.put("allow-remove-wallpaper", if (restrictions.getBoolean("allow_remove_wallpaper", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("allow_always_software_render")) {
+                defaultSettings.put("allow-always-software-render", if (restrictions.getBoolean("allow_always_software_render", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("allow_linux_headless")) {
+                defaultSettings.put("allow-linux-headless", if (restrictions.getBoolean("allow_linux_headless", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("enable_hwcodec")) {
+                defaultSettings.put("enable-hwcodec", if (restrictions.getBoolean("enable_hwcodec", true)) "Y" else "N")
+            }
 
-            // === Display Settings (default-settings) ===
+            // ========================================
+            // Display Settings (KEYS_DISPLAY_SETTINGS)
+            // ========================================
             if (restrictions.containsKey("view_only")) {
                 defaultSettings.put("view-only", if (restrictions.getBoolean("view_only", false)) "Y" else "N")
             }
+            if (restrictions.containsKey("show_monitors_toolbar")) {
+                defaultSettings.put("show-monitors-toolbar", if (restrictions.getBoolean("show_monitors_toolbar", true)) "Y" else "N")
+            }
+            if (restrictions.containsKey("collapse_toolbar")) {
+                defaultSettings.put("collapse-toolbar", if (restrictions.getBoolean("collapse_toolbar", false)) "Y" else "N")
+            }
             if (restrictions.containsKey("show_remote_cursor")) {
                 defaultSettings.put("show-remote-cursor", if (restrictions.getBoolean("show_remote_cursor", true)) "Y" else "N")
+            }
+            if (restrictions.containsKey("follow_remote_cursor")) {
+                defaultSettings.put("follow-remote-cursor", if (restrictions.getBoolean("follow_remote_cursor", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("follow_remote_window")) {
+                defaultSettings.put("follow-remote-window", if (restrictions.getBoolean("follow_remote_window", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("zoom_cursor")) {
+                defaultSettings.put("zoom-cursor", if (restrictions.getBoolean("zoom_cursor", false)) "Y" else "N")
             }
             if (restrictions.containsKey("show_quality_monitor")) {
                 defaultSettings.put("show-quality-monitor", if (restrictions.getBoolean("show_quality_monitor", false)) "Y" else "N")
             }
             if (restrictions.containsKey("disable_audio")) {
                 defaultSettings.put("disable-audio", if (restrictions.getBoolean("disable_audio", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("enable_file_copy_paste")) {
+                defaultSettings.put("enable-file-copy-paste", if (restrictions.getBoolean("enable_file_copy_paste", true)) "Y" else "N")
             }
             if (restrictions.containsKey("disable_clipboard")) {
                 defaultSettings.put("disable-clipboard", if (restrictions.getBoolean("disable_clipboard", false)) "Y" else "N")
@@ -353,39 +447,169 @@ class MainService : Service() {
             if (restrictions.containsKey("privacy_mode")) {
                 defaultSettings.put("privacy-mode", if (restrictions.getBoolean("privacy_mode", false)) "Y" else "N")
             }
-            restrictions.getString("image_quality")?.takeIf { it.isNotEmpty() }?.let {
-                defaultSettings.put("image-quality", it)
+            if (restrictions.containsKey("touch_mode")) {
+                defaultSettings.put("touch-mode", if (restrictions.getBoolean("touch_mode", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("i444")) {
+                defaultSettings.put("i444", if (restrictions.getBoolean("i444", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("reverse_mouse_wheel")) {
+                defaultSettings.put("reverse-mouse-wheel", if (restrictions.getBoolean("reverse_mouse_wheel", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("swap_left_right_mouse")) {
+                defaultSettings.put("swap-left-right-mouse", if (restrictions.getBoolean("swap_left_right_mouse", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("displays_as_individual_windows")) {
+                defaultSettings.put("displays-as-individual-windows", if (restrictions.getBoolean("displays_as_individual_windows", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("use_all_my_displays_for_the_remote_session")) {
+                defaultSettings.put("use-all-my-displays-for-the-remote-session", if (restrictions.getBoolean("use_all_my_displays_for_the_remote_session", false)) "Y" else "N")
             }
             restrictions.getString("view_style")?.takeIf { it.isNotEmpty() }?.let {
                 defaultSettings.put("view-style", it)
             }
+            if (restrictions.containsKey("terminal_persistent")) {
+                defaultSettings.put("terminal-persistent", if (restrictions.getBoolean("terminal_persistent", false)) "Y" else "N")
+            }
+            restrictions.getString("scroll_style")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("scroll-style", it)
+            }
+            restrictions.getString("edge_scroll_edge_thickness")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("edge-scroll-edge-thickness", it)
+            }
+            restrictions.getString("image_quality")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("image-quality", it)
+            }
+            restrictions.getString("custom_image_quality")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("custom-image-quality", it)
+            }
+            restrictions.getString("custom_fps")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("custom-fps", it)
+            }
+            restrictions.getString("codec_preference")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("codec-preference", it)
+            }
+            if (restrictions.containsKey("sync_init_clipboard")) {
+                defaultSettings.put("sync-init-clipboard", if (restrictions.getBoolean("sync_init_clipboard", false)) "Y" else "N")
+            }
+            restrictions.getString("trackpad_speed")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("trackpad-speed", it)
+            }
+            if (restrictions.containsKey("show_virtual_mouse")) {
+                defaultSettings.put("show-virtual-mouse", if (restrictions.getBoolean("show_virtual_mouse", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("show_virtual_joystick")) {
+                defaultSettings.put("show-virtual-joystick", if (restrictions.getBoolean("show_virtual_joystick", false)) "Y" else "N")
+            }
 
-            // === Local Settings (default-settings) ===
+            // ========================================
+            // Local Settings (KEYS_LOCAL_SETTINGS)
+            // ========================================
             restrictions.getString("theme")?.takeIf { it.isNotEmpty() }?.let {
                 defaultSettings.put("theme", it)
             }
             restrictions.getString("lang")?.takeIf { it.isNotEmpty() }?.let {
                 defaultSettings.put("lang", it)
             }
+            if (restrictions.containsKey("enable_confirm_closing_tabs")) {
+                defaultSettings.put("enable-confirm-closing-tabs", if (restrictions.getBoolean("enable_confirm_closing_tabs", true)) "Y" else "N")
+            }
+            if (restrictions.containsKey("enable_open_new_connections_in_tabs")) {
+                defaultSettings.put("enable-open-new-connections-in-tabs", if (restrictions.getBoolean("enable_open_new_connections_in_tabs", true)) "Y" else "N")
+            }
+            if (restrictions.containsKey("use_texture_render")) {
+                defaultSettings.put("use-texture-render", if (restrictions.getBoolean("use_texture_render", true)) "Y" else "N")
+            }
+            if (restrictions.containsKey("allow_d3d_render")) {
+                defaultSettings.put("allow-d3d-render", if (restrictions.getBoolean("allow_d3d_render", true)) "Y" else "N")
+            }
+            if (restrictions.containsKey("sync_ab_with_recent_sessions")) {
+                defaultSettings.put("sync-ab-with-recent-sessions", if (restrictions.getBoolean("sync_ab_with_recent_sessions", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("sync_ab_tags")) {
+                defaultSettings.put("sync-ab-tags", if (restrictions.getBoolean("sync_ab_tags", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("filter_ab_by_intersection")) {
+                defaultSettings.put("filter-ab-by-intersection", if (restrictions.getBoolean("filter_ab_by_intersection", false)) "Y" else "N")
+            }
+            restrictions.getString("remote_menubar_drag_left")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("remote-menubar-drag-left", it)
+            }
+            restrictions.getString("remote_menubar_drag_right")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("remote-menubar-drag-right", it)
+            }
+            if (restrictions.containsKey("hide_ab_tags_panel")) {
+                defaultSettings.put("hideAbTagsPanel", if (restrictions.getBoolean("hide_ab_tags_panel", false)) "Y" else "N")
+            }
+            restrictions.getString("flutter_remote_menubar_state")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("flutter-remote-menubar-state", it)
+            }
+            restrictions.getString("flutter_peer_sorting")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("flutter-peer-sorting", it)
+            }
+            restrictions.getString("flutter_peer_tab_index")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("flutter-peer-tab-index", it)
+            }
+            restrictions.getString("flutter_peer_tab_order")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("flutter-peer-tab-order", it)
+            }
+            restrictions.getString("flutter_peer_tab_visible")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("flutter-peer-tab-visible", it)
+            }
+            restrictions.getString("flutter_peer_card_ui_type")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("flutter-peer-card-ui-type", it)
+            }
+            restrictions.getString("flutter_current_ab_name")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("flutter-current-ab-name", it)
+            }
             if (restrictions.containsKey("disable_floating_window")) {
                 defaultSettings.put("disable-floating-window", if (restrictions.getBoolean("disable_floating_window", false)) "Y" else "N")
+            }
+            restrictions.getString("floating_window_size")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("floating-window-size", it)
+            }
+            if (restrictions.containsKey("floating_window_untouchable")) {
+                defaultSettings.put("floating-window-untouchable", if (restrictions.getBoolean("floating_window_untouchable", false)) "Y" else "N")
+            }
+            restrictions.getString("floating_window_transparency")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("floating-window-transparency", it)
+            }
+            restrictions.getString("floating_window_svg")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("floating-window-svg", it)
             }
             if (restrictions.containsKey("keep_screen_on")) {
                 defaultSettings.put("keep-screen-on", if (restrictions.getBoolean("keep_screen_on", true)) "Y" else "N")
             }
+            if (restrictions.containsKey("keep_awake_during_outgoing_sessions")) {
+                defaultSettings.put("keep-awake-during-outgoing-sessions", if (restrictions.getBoolean("keep_awake_during_outgoing_sessions", true)) "Y" else "N")
+            }
+            if (restrictions.containsKey("disable_group_panel")) {
+                defaultSettings.put("disable-group-panel", if (restrictions.getBoolean("disable_group_panel", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("disable_discovery_panel")) {
+                defaultSettings.put("disable-discovery-panel", if (restrictions.getBoolean("disable_discovery_panel", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("pre_elevate_service")) {
+                defaultSettings.put("pre-elevate-service", if (restrictions.getBoolean("pre_elevate_service", false)) "Y" else "N")
+            }
 
-            // === Built-in Settings (default-settings) ===
+            // ========================================
+            // Built-in Settings (KEYS_BUILDIN_SETTINGS)
+            // ========================================
             restrictions.getString("display_name")?.takeIf { it.isNotEmpty() }?.let {
                 defaultSettings.put("display-name", it)
             }
+            restrictions.getString("preset_device_group_name")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("preset-device-group-name", it)
+            }
             restrictions.getString("preset_username")?.takeIf { it.isNotEmpty() }?.let {
-                defaultSettings.put("preset-username", it)
+                defaultSettings.put("preset-user-name", it)
             }
             restrictions.getString("preset_strategy_name")?.takeIf { it.isNotEmpty() }?.let {
                 defaultSettings.put("preset-strategy-name", it)
             }
-            restrictions.getString("preset_device_group_name")?.takeIf { it.isNotEmpty() }?.let {
-                defaultSettings.put("preset-device-group-name", it)
+            if (restrictions.containsKey("remove_preset_password_warning")) {
+                defaultSettings.put("remove-preset-password-warning", if (restrictions.getBoolean("remove_preset_password_warning", false)) "Y" else "N")
             }
             if (restrictions.containsKey("hide_security_settings")) {
                 defaultSettings.put("hide-security-settings", if (restrictions.getBoolean("hide_security_settings", false)) "Y" else "N")
@@ -396,29 +620,130 @@ class MainService : Service() {
             if (restrictions.containsKey("hide_server_settings")) {
                 defaultSettings.put("hide-server-settings", if (restrictions.getBoolean("hide_server_settings", false)) "Y" else "N")
             }
+            if (restrictions.containsKey("hide_proxy_settings")) {
+                defaultSettings.put("hide-proxy-settings", if (restrictions.getBoolean("hide_proxy_settings", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("hide_remote_printer_settings")) {
+                defaultSettings.put("hide-remote-printer-settings", if (restrictions.getBoolean("hide_remote_printer_settings", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("hide_websocket_settings")) {
+                defaultSettings.put("hide-websocket-settings", if (restrictions.getBoolean("hide_websocket_settings", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("hide_username_on_card")) {
+                defaultSettings.put("hide-username-on-card", if (restrictions.getBoolean("hide_username_on_card", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("hide_help_cards")) {
+                defaultSettings.put("hide-help-cards", if (restrictions.getBoolean("hide_help_cards", false)) "Y" else "N")
+            }
+            restrictions.getString("default_connect_password")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("default-connect-password", it)
+            }
+            if (restrictions.containsKey("hide_tray")) {
+                defaultSettings.put("hide-tray", if (restrictions.getBoolean("hide_tray", false)) "Y" else "N")
+            }
+            restrictions.getString("one_way_clipboard_redirection")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("one-way-clipboard-redirection", it)
+            }
+            if (restrictions.containsKey("allow_logon_screen_password")) {
+                defaultSettings.put("allow-logon-screen-password", if (restrictions.getBoolean("allow_logon_screen_password", false)) "Y" else "N")
+            }
+            restrictions.getString("one_way_file_transfer")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("one-way-file-transfer", it)
+            }
+            if (restrictions.containsKey("allow_https_21114")) {
+                defaultSettings.put("allow-https-21114", if (restrictions.getBoolean("allow_https_21114", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("allow_hostname_as_id")) {
+                defaultSettings.put("allow-hostname-as-id", if (restrictions.getBoolean("allow_hostname_as_id", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("register_device")) {
+                defaultSettings.put("register-device", if (restrictions.getBoolean("register_device", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("hide_powered_by_me")) {
+                defaultSettings.put("hide-powered-by-me", if (restrictions.getBoolean("hide_powered_by_me", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("main_window_always_on_top")) {
+                defaultSettings.put("main-window-always-on-top", if (restrictions.getBoolean("main_window_always_on_top", false)) "Y" else "N")
+            }
+            restrictions.getString("file_transfer_max_files")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("file-transfer-max-files", it)
+            }
             if (restrictions.containsKey("disable_change_permanent_password")) {
                 defaultSettings.put("disable-change-permanent-password", if (restrictions.getBoolean("disable_change_permanent_password", false)) "Y" else "N")
             }
             if (restrictions.containsKey("disable_change_id")) {
                 defaultSettings.put("disable-change-id", if (restrictions.getBoolean("disable_change_id", false)) "Y" else "N")
             }
-
-            // === Override Settings (override-settings) ===
-            // These settings override user preferences
-            if (restrictions.containsKey("allow_auto_disconnect")) {
-                overrideSettings.put("allow-auto-disconnect", if (restrictions.getBoolean("allow_auto_disconnect", true)) "Y" else "N")
-            }
-            restrictions.getString("auto_disconnect_timeout")?.takeIf { it.isNotEmpty() }?.let {
-                overrideSettings.put("auto-disconnect-timeout", it)
-            }
-            restrictions.getString("direct_server")?.takeIf { it.isNotEmpty() }?.let {
-                overrideSettings.put("direct-server", it)
-            }
-            restrictions.getString("direct_access_port")?.takeIf { it.isNotEmpty() }?.let {
-                overrideSettings.put("direct-access-port", it)
+            if (restrictions.containsKey("disable_unlock_pin")) {
+                defaultSettings.put("disable-unlock-pin", if (restrictions.getBoolean("disable_unlock_pin", false)) "Y" else "N")
             }
 
-            // Add settings objects to config if they have content
+            // ========================================
+            // Preset Address Book Settings
+            // ========================================
+            restrictions.getString("preset_address_book_name")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("preset-address-book-name", it)
+            }
+            restrictions.getString("preset_address_book_tag")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("preset-address-book-tag", it)
+            }
+            restrictions.getString("preset_address_book_alias")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("preset-address-book-alias", it)
+            }
+            restrictions.getString("preset_address_book_password")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("preset-address-book-password", it)
+            }
+            restrictions.getString("preset_address_book_note")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("preset-address-book-note", it)
+            }
+            restrictions.getString("preset_device_username")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("preset-device-username", it)
+            }
+            restrictions.getString("preset_device_name")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("preset-device-name", it)
+            }
+            restrictions.getString("preset_note")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("preset-note", it)
+            }
+
+            // ========================================
+            // Proxy Settings
+            // ========================================
+            restrictions.getString("proxy_url")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("proxy-url", it)
+            }
+            restrictions.getString("proxy_username")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("proxy-username", it)
+            }
+            restrictions.getString("proxy_password")?.takeIf { it.isNotEmpty() }?.let {
+                defaultSettings.put("proxy-password", it)
+            }
+
+            // ========================================
+            // Miscellaneous Settings
+            // ========================================
+            if (restrictions.containsKey("enable_check_update")) {
+                defaultSettings.put("enable-check-update", if (restrictions.getBoolean("enable_check_update", true)) "Y" else "N")
+            }
+            if (restrictions.containsKey("allow_auto_update")) {
+                defaultSettings.put("allow-auto-update", if (restrictions.getBoolean("allow_auto_update", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("enable_directx_capture")) {
+                defaultSettings.put("enable-directx-capture", if (restrictions.getBoolean("enable_directx_capture", true)) "Y" else "N")
+            }
+            if (restrictions.containsKey("enable_android_software_encoding_half_scale")) {
+                defaultSettings.put("enable-android-software-encoding-half-scale", if (restrictions.getBoolean("enable_android_software_encoding_half_scale", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("av1_test")) {
+                defaultSettings.put("av1-test", if (restrictions.getBoolean("av1_test", false)) "Y" else "N")
+            }
+            if (restrictions.containsKey("enable_flutter_http_on_rust")) {
+                defaultSettings.put("enable-flutter-http-on-rust", if (restrictions.getBoolean("enable_flutter_http_on_rust", false)) "Y" else "N")
+            }
+
+            // ========================================
+            // Build final config JSON
+            // ========================================
             if (defaultSettings.length() > 0) {
                 config.put("default-settings", defaultSettings)
             }
@@ -428,7 +753,7 @@ class MainService : Service() {
 
             val result = if (config.length() > 0) config.toString() else ""
             if (result.isNotEmpty()) {
-                Log.d(logTag, "MDM configuration built: $result")
+                Log.d(logTag, "MDM configuration built successfully")
             }
             result
         } catch (e: JSONException) {

@@ -1,18 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <restrictions xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- ==================== -->
-    <!-- App Identity         -->
-    <!-- ==================== -->
+    <!-- ======================================== -->
+    <!-- App Identity & Top-Level Settings       -->
+    <!-- ======================================== -->
     <restriction
-        android:key="FortDesk"
-        android:title="FortDesk"
+        android:key="app_name"
+        android:title="App Name"
         android:restrictionType="string"
         android:defaultValue="" />
 
-    <!-- ==================== -->
-    <!-- Server Configuration -->
-    <!-- ==================== -->
+    <restriction
+        android:key="hardcoded_password"
+        android:title="Hardcoded Password"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <!-- ======================================== -->
+    <!-- Server Configuration                    -->
+    <!-- ======================================== -->
     <restriction
         android:key="custom_rendezvous_server"
         android:title="Rendezvous Server"
@@ -37,18 +43,48 @@
         android:restrictionType="string"
         android:defaultValue="" />
 
-    <!-- ==================== -->
-    <!-- Security Settings    -->
-    <!-- ==================== -->
     <restriction
-        android:key="hardcoded_password"
-        android:title="Hardcoded Password"
+        android:key="allow_websocket"
+        android:title="Allow WebSocket"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="ice_servers"
+        android:title="ICE Servers"
         android:restrictionType="string"
         android:defaultValue="" />
 
     <restriction
-        android:key="verification_method"
-        android:title="Verification Method"
+        android:key="direct_server"
+        android:title="Direct Server"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="direct_access_port"
+        android:title="Direct Access Port"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="disable_udp"
+        android:title="Disable UDP"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="allow_insecure_tls_fallback"
+        android:title="Allow Insecure TLS Fallback"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <!-- ======================================== -->
+    <!-- Security & Access Settings              -->
+    <!-- ======================================== -->
+    <restriction
+        android:key="access_mode"
+        android:title="Access Mode"
         android:restrictionType="string"
         android:defaultValue="" />
 
@@ -59,8 +95,8 @@
         android:defaultValue="" />
 
     <restriction
-        android:key="access_mode"
-        android:title="Access Mode"
+        android:key="verification_method"
+        android:title="Verification Method"
         android:restrictionType="string"
         android:defaultValue="" />
 
@@ -70,9 +106,27 @@
         android:restrictionType="string"
         android:defaultValue="" />
 
-    <!-- ==================== -->
-    <!-- Permission Controls  -->
-    <!-- ==================== -->
+    <restriction
+        android:key="temporary_password_length"
+        android:title="Temporary Password Length"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="allow_numeric_one_time_password"
+        android:title="Allow Numeric One-Time Password"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="enable_trusted_devices"
+        android:title="Enable Trusted Devices"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <!-- ======================================== -->
+    <!-- Permission Controls (KEYS_SETTINGS)     -->
+    <!-- ======================================== -->
     <restriction
         android:key="enable_keyboard"
         android:title="Enable Keyboard"
@@ -88,6 +142,24 @@
     <restriction
         android:key="enable_file_transfer"
         android:title="Enable File Transfer"
+        android:restrictionType="bool"
+        android:defaultValue="true" />
+
+    <restriction
+        android:key="enable_camera"
+        android:title="Enable Camera"
+        android:restrictionType="bool"
+        android:defaultValue="true" />
+
+    <restriction
+        android:key="enable_terminal"
+        android:title="Enable Terminal"
+        android:restrictionType="bool"
+        android:defaultValue="true" />
+
+    <restriction
+        android:key="enable_remote_printer"
+        android:title="Enable Remote Printer"
         android:restrictionType="bool"
         android:defaultValue="true" />
 
@@ -122,20 +194,86 @@
         android:defaultValue="true" />
 
     <restriction
+        android:key="allow_remote_config_modification"
+        android:title="Allow Remote Config Modification"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
         android:key="enable_lan_discovery"
         android:title="Enable LAN Discovery"
         android:restrictionType="bool"
         android:defaultValue="true" />
 
     <restriction
-        android:key="allow_remote_config_modification"
-        android:title="Allow Remote Config Modification"
+        android:key="allow_auto_disconnect"
+        android:title="Allow Auto Disconnect"
+        android:restrictionType="bool"
+        android:defaultValue="true" />
+
+    <restriction
+        android:key="auto_disconnect_timeout"
+        android:title="Auto Disconnect Timeout"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="allow_only_conn_window_open"
+        android:title="Allow Only Connection Window Open"
         android:restrictionType="bool"
         android:defaultValue="false" />
 
-    <!-- ==================== -->
-    <!-- Display Settings     -->
-    <!-- ==================== -->
+    <restriction
+        android:key="allow_auto_record_incoming"
+        android:title="Allow Auto Record Incoming"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="allow_auto_record_outgoing"
+        android:title="Allow Auto Record Outgoing"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="video_save_directory"
+        android:title="Video Save Directory"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="enable_abr"
+        android:title="Enable Adaptive Bitrate"
+        android:restrictionType="bool"
+        android:defaultValue="true" />
+
+    <restriction
+        android:key="allow_remove_wallpaper"
+        android:title="Allow Remove Wallpaper"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="allow_always_software_render"
+        android:title="Allow Always Software Render"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="allow_linux_headless"
+        android:title="Allow Linux Headless"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="enable_hwcodec"
+        android:title="Enable Hardware Codec"
+        android:restrictionType="bool"
+        android:defaultValue="true" />
+
+    <!-- ======================================== -->
+    <!-- Display Settings (KEYS_DISPLAY_SETTINGS)-->
+    <!-- ======================================== -->
     <restriction
         android:key="view_only"
         android:title="View Only Mode"
@@ -143,10 +281,40 @@
         android:defaultValue="false" />
 
     <restriction
-        android:key="show_cursor"
+        android:key="show_monitors_toolbar"
+        android:title="Show Monitors Toolbar"
+        android:restrictionType="bool"
+        android:defaultValue="true" />
+
+    <restriction
+        android:key="collapse_toolbar"
+        android:title="Collapse Toolbar"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="show_remote_cursor"
         android:title="Show Remote Cursor"
         android:restrictionType="bool"
         android:defaultValue="true" />
+
+    <restriction
+        android:key="follow_remote_cursor"
+        android:title="Follow Remote Cursor"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="follow_remote_window"
+        android:title="Follow Remote Window"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="zoom_cursor"
+        android:title="Zoom Cursor"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
 
     <restriction
         android:key="show_quality_monitor"
@@ -159,6 +327,12 @@
         android:title="Disable Audio"
         android:restrictionType="bool"
         android:defaultValue="false" />
+
+    <restriction
+        android:key="enable_file_copy_paste"
+        android:title="Enable File Copy Paste"
+        android:restrictionType="bool"
+        android:defaultValue="true" />
 
     <restriction
         android:key="disable_clipboard"
@@ -179,10 +353,40 @@
         android:defaultValue="false" />
 
     <restriction
-        android:key="image_quality"
-        android:title="Image Quality"
-        android:restrictionType="string"
-        android:defaultValue="" />
+        android:key="touch_mode"
+        android:title="Touch Mode"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="i444"
+        android:title="I444 Color Mode"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="reverse_mouse_wheel"
+        android:title="Reverse Mouse Wheel"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="swap_left_right_mouse"
+        android:title="Swap Left Right Mouse"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="displays_as_individual_windows"
+        android:title="Displays As Individual Windows"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="use_all_my_displays_for_the_remote_session"
+        android:title="Use All My Displays For Remote Session"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
 
     <restriction
         android:key="view_style"
@@ -190,9 +394,75 @@
         android:restrictionType="string"
         android:defaultValue="" />
 
-    <!-- ==================== -->
-    <!-- Local Settings       -->
-    <!-- ==================== -->
+    <restriction
+        android:key="terminal_persistent"
+        android:title="Terminal Persistent"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="scroll_style"
+        android:title="Scroll Style"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="edge_scroll_edge_thickness"
+        android:title="Edge Scroll Edge Thickness"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="image_quality"
+        android:title="Image Quality"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="custom_image_quality"
+        android:title="Custom Image Quality"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="custom_fps"
+        android:title="Custom FPS"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="codec_preference"
+        android:title="Codec Preference"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="sync_init_clipboard"
+        android:title="Sync Init Clipboard"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="trackpad_speed"
+        android:title="Trackpad Speed"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="show_virtual_mouse"
+        android:title="Show Virtual Mouse"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="show_virtual_joystick"
+        android:title="Show Virtual Joystick"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <!-- ======================================== -->
+    <!-- Local Settings (KEYS_LOCAL_SETTINGS)    -->
+    <!-- ======================================== -->
     <restriction
         android:key="theme"
         android:title="Theme"
@@ -206,10 +476,136 @@
         android:defaultValue="" />
 
     <restriction
+        android:key="enable_confirm_closing_tabs"
+        android:title="Enable Confirm Closing Tabs"
+        android:restrictionType="bool"
+        android:defaultValue="true" />
+
+    <restriction
+        android:key="enable_open_new_connections_in_tabs"
+        android:title="Enable Open New Connections In Tabs"
+        android:restrictionType="bool"
+        android:defaultValue="true" />
+
+    <restriction
+        android:key="use_texture_render"
+        android:title="Use Texture Render"
+        android:restrictionType="bool"
+        android:defaultValue="true" />
+
+    <restriction
+        android:key="allow_d3d_render"
+        android:title="Allow D3D Render"
+        android:restrictionType="bool"
+        android:defaultValue="true" />
+
+    <restriction
+        android:key="sync_ab_with_recent_sessions"
+        android:title="Sync Address Book With Recent Sessions"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="sync_ab_tags"
+        android:title="Sync Address Book Tags"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="filter_ab_by_intersection"
+        android:title="Filter Address Book By Intersection"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="remote_menubar_drag_left"
+        android:title="Remote Menubar Drag Left"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="remote_menubar_drag_right"
+        android:title="Remote Menubar Drag Right"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="hide_ab_tags_panel"
+        android:title="Hide Address Book Tags Panel"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="flutter_remote_menubar_state"
+        android:title="Flutter Remote Menubar State"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="flutter_peer_sorting"
+        android:title="Flutter Peer Sorting"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="flutter_peer_tab_index"
+        android:title="Flutter Peer Tab Index"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="flutter_peer_tab_order"
+        android:title="Flutter Peer Tab Order"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="flutter_peer_tab_visible"
+        android:title="Flutter Peer Tab Visible"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="flutter_peer_card_ui_type"
+        android:title="Flutter Peer Card UI Type"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="flutter_current_ab_name"
+        android:title="Flutter Current Address Book Name"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
         android:key="disable_floating_window"
         android:title="Disable Floating Window"
         android:restrictionType="bool"
         android:defaultValue="false" />
+
+    <restriction
+        android:key="floating_window_size"
+        android:title="Floating Window Size"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="floating_window_untouchable"
+        android:title="Floating Window Untouchable"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="floating_window_transparency"
+        android:title="Floating Window Transparency"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="floating_window_svg"
+        android:title="Floating Window SVG"
+        android:restrictionType="string"
+        android:defaultValue="" />
 
     <restriction
         android:key="keep_screen_on"
@@ -217,12 +613,42 @@
         android:restrictionType="bool"
         android:defaultValue="true" />
 
-    <!-- ==================== -->
-    <!-- Built-in Settings    -->
-    <!-- ==================== -->
+    <restriction
+        android:key="keep_awake_during_outgoing_sessions"
+        android:title="Keep Awake During Outgoing Sessions"
+        android:restrictionType="bool"
+        android:defaultValue="true" />
+
+    <restriction
+        android:key="disable_group_panel"
+        android:title="Disable Group Panel"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="disable_discovery_panel"
+        android:title="Disable Discovery Panel"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="pre_elevate_service"
+        android:title="Pre-Elevate Service"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <!-- ======================================== -->
+    <!-- Built-in Settings (KEYS_BUILDIN_SETTINGS)-->
+    <!-- ======================================== -->
     <restriction
         android:key="display_name"
         android:title="Display Name"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="preset_device_group_name"
+        android:title="Preset Device Group Name"
         android:restrictionType="string"
         android:defaultValue="" />
 
@@ -239,10 +665,10 @@
         android:defaultValue="" />
 
     <restriction
-        android:key="preset_device_group_name"
-        android:title="Preset Device Group Name"
-        android:restrictionType="string"
-        android:defaultValue="" />
+        android:key="remove_preset_password_warning"
+        android:title="Remove Preset Password Warning"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
 
     <restriction
         android:key="hide_security_settings"
@@ -263,6 +689,102 @@
         android:defaultValue="false" />
 
     <restriction
+        android:key="hide_proxy_settings"
+        android:title="Hide Proxy Settings"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="hide_remote_printer_settings"
+        android:title="Hide Remote Printer Settings"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="hide_websocket_settings"
+        android:title="Hide WebSocket Settings"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="hide_username_on_card"
+        android:title="Hide Username On Card"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="hide_help_cards"
+        android:title="Hide Help Cards"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="default_connect_password"
+        android:title="Default Connect Password"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="hide_tray"
+        android:title="Hide Tray"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="one_way_clipboard_redirection"
+        android:title="One Way Clipboard Redirection"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="allow_logon_screen_password"
+        android:title="Allow Logon Screen Password"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="one_way_file_transfer"
+        android:title="One Way File Transfer"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="allow_https_21114"
+        android:title="Allow HTTPS 21114"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="allow_hostname_as_id"
+        android:title="Allow Hostname As ID"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="register_device"
+        android:title="Register Device"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="hide_powered_by_me"
+        android:title="Hide Powered By Me"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="main_window_always_on_top"
+        android:title="Main Window Always On Top"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="file_transfer_max_files"
+        android:title="File Transfer Max Files"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
         android:key="disable_change_permanent_password"
         android:title="Disable Change Permanent Password"
         android:restrictionType="bool"
@@ -274,31 +796,121 @@
         android:restrictionType="bool"
         android:defaultValue="false" />
 
-    <!-- ==================== -->
-    <!-- Advanced / Override  -->
-    <!-- ==================== -->
     <restriction
-        android:key="allow_auto_disconnect"
-        android:title="Allow Auto Disconnect"
+        android:key="disable_unlock_pin"
+        android:title="Disable Unlock PIN"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <!-- ======================================== -->
+    <!-- Preset Address Book Settings            -->
+    <!-- ======================================== -->
+    <restriction
+        android:key="preset_address_book_name"
+        android:title="Preset Address Book Name"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="preset_address_book_tag"
+        android:title="Preset Address Book Tag"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="preset_address_book_alias"
+        android:title="Preset Address Book Alias"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="preset_address_book_password"
+        android:title="Preset Address Book Password"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="preset_address_book_note"
+        android:title="Preset Address Book Note"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="preset_device_username"
+        android:title="Preset Device Username"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="preset_device_name"
+        android:title="Preset Device Name"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="preset_note"
+        android:title="Preset Note"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <!-- ======================================== -->
+    <!-- Proxy Settings                          -->
+    <!-- ======================================== -->
+    <restriction
+        android:key="proxy_url"
+        android:title="Proxy URL"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="proxy_username"
+        android:title="Proxy Username"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="proxy_password"
+        android:title="Proxy Password"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <!-- ======================================== -->
+    <!-- Miscellaneous Settings                  -->
+    <!-- ======================================== -->
+    <restriction
+        android:key="enable_check_update"
+        android:title="Enable Check Update"
         android:restrictionType="bool"
         android:defaultValue="true" />
 
     <restriction
-        android:key="auto_disconnect_timeout"
-        android:title="Auto Disconnect Timeout"
-        android:restrictionType="string"
-        android:defaultValue="" />
+        android:key="allow_auto_update"
+        android:title="Allow Auto Update"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
 
     <restriction
-        android:key="direct_server"
-        android:title="Direct Server"
-        android:restrictionType="string"
-        android:defaultValue="" />
+        android:key="enable_directx_capture"
+        android:title="Enable DirectX Capture"
+        android:restrictionType="bool"
+        android:defaultValue="true" />
 
     <restriction
-        android:key="direct_access_port"
-        android:title="Direct Access Port"
-        android:restrictionType="string"
-        android:defaultValue="" />
+        android:key="enable_android_software_encoding_half_scale"
+        android:title="Enable Android Software Encoding Half Scale"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="av1_test"
+        android:title="AV1 Test"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
+
+    <restriction
+        android:key="enable_flutter_http_on_rust"
+        android:title="Enable Flutter HTTP On Rust"
+        android:restrictionType="bool"
+        android:defaultValue="false" />
 
 </restrictions>

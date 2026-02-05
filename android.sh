@@ -218,6 +218,10 @@ preflight_checks() {
   info "VCPKG_ROOT: $VCPKG_ROOT"
   info "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
   info "ANDROID_NDK_HOME: $ANDROID_NDK_HOME"
+
+  cd flutter
+  flutter clean
+  cd ../
 }
 
 # ============================================================================
@@ -303,7 +307,6 @@ generate_bridge() {
   # Run flutter pub get
   info "Running flutter pub get..."
   pushd flutter
-  # sed -i -e 's/extended_text: 14.0.0/extended_text: 13.0.0/g' pubspec.yaml 2>/dev/null || true
   flutter pub get
   popd
 
@@ -400,9 +403,6 @@ build_native_lib() {
   JNILIBS_DIR="flutter/android/app/src/main/jniLibs/$ANDROID_ABI"
   mkdir -p "$JNILIBS_DIR"
   cp "./target/$RUST_TARGET/release/liblibrustdesk.so" "$JNILIBS_DIR/librustdesk.so"
-  echo "Copying custom config"
-  cp "./custom.txt" "$JNILIBS_DIR/custom.txt"
-  echo "Copied custom config"
 
   # Copy libc++_shared.so from NDK
   NDK_SYSROOT="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/$NDK_ARCH"
