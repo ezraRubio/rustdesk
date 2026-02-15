@@ -17,6 +17,8 @@ import android.app.PendingIntent.FLAG_UPDATE_CURRENT
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.ComponentName
+import android.content.ServiceConnection
 import android.content.res.Configuration
 import android.content.res.Configuration.ORIENTATION_LANDSCAPE
 import android.graphics.Color
@@ -27,6 +29,7 @@ import android.media.*
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.*
+import android.os.IBinder
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.Surface
@@ -45,6 +48,9 @@ import org.json.JSONObject
 import java.nio.ByteBuffer
 import kotlin.math.max
 import kotlin.math.min
+import il.co.tmg.screentool.ICaptureService
+import il.co.tmg.screentool.IFrameCallback
+import il.co.tmg.screentool.DirtyRegionData
 
 const val DEFAULT_NOTIFY_TITLE = "RustDesk"
 const val DEFAULT_NOTIFY_TEXT = "Service is running"
@@ -195,6 +201,10 @@ class MainService : Service() {
     private val wakeLock: PowerManager.WakeLock by lazy { powerManager.newWakeLock(PowerManager.ACQUIRE_CAUSES_WAKEUP or PowerManager.SCREEN_BRIGHT_WAKE_LOCK, "rustdesk:wakelock")}
 
     companion object {
+        const val KNOX_PACKAGE = "il.co.tmg.screentool"
+        const val KNOX_SERVICE = "il.co.tmg.screentool.service.CaptureService"
+        private const val KNOX_BIND_TIMEOUT_MS = 5000L
+        
         private var _isReady = false // media permission ready status
         private var _isStart = false // screen capture start status
         private var _isAudioStart = false // audio capture start status
@@ -219,6 +229,10 @@ class MainService : Service() {
     private var videoEncoder: MediaCodec? = null
     private var imageReader: ImageReader? = null
     private var virtualDisplay: VirtualDisplay? = null
+
+    // Knox capture
+    private var knoxCapturer: KnoxCapturer? = null
+    private var isUsingKnox = false
 
     // audio
     private val audioRecordHandle = AudioRecordHandle(this, { isStart }, { isAudioStart })
@@ -403,25 +417,50 @@ class MainService : Service() {
         return audioRecordHandle.onVoiceCallClosed(mediaProjection)
     }
 
-    fun startCapture(): Boolean {
-        if (isStart) {
-            return true
+    private fun isKnoxAvailable(): Boolean {
+        val intent = Intent().apply {
+            setClassName(KNOX_PACKAGE, KNOX_SERVICE)
         }
-        if (mediaProjection == null) {
-            Log.w(logTag, "startCapture fail,mediaProjection is null")
+        val resolveInfo = packageManager.resolveService(intent, 0)
+        val available = resolveInfo != null
+        Log.d(logTag, "Knox service available: $available")
+        return available
+    }
+
+    private fun startKnoxCapture(): Boolean {
+        knoxCapturer = KnoxCapturer()
+        
+        if (!knoxCapturer!!.bind()) {
+            Log.w(logTag, "Failed to bind Knox service")
+            knoxCapturer = null
             return false
         }
         
-        updateScreenInfo(resources.configuration.orientation)
-        Log.d(logTag, "Start Capture")
-        surface = createSurface()
+        if (!knoxCapturer!!.initCapture()) {
+            Log.w(logTag, "Failed to initialize Knox capture")
+            knoxCapturer?.unbind()
+            knoxCapturer = null
+            return false
+        }
+        
+        return true
+    }
 
+    private fun startMediaProjectionCapture(): Boolean {
+        // Existing MediaProjection logic
+        if (mediaProjection == null) {
+            Log.w(logTag, "startCapture fail, mediaProjection is null")
+            return false
+        }
+        
+        surface = createSurface()
+        
         if (useVP9) {
             startVP9VideoRecorder(mediaProjection!!)
         } else {
             startRawVideoRecorder(mediaProjection!!)
         }
-
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             if (!audioRecordHandle.createAudioRecorder(false, mediaProjection)) {
                 Log.d(logTag, "createAudioRecorder fail")
@@ -430,45 +469,79 @@ class MainService : Service() {
                 audioRecordHandle.startAudioRecorder()
             }
         }
+        
         checkMediaPermission()
         _isStart = true
-        FFI.setFrameRawEnable("video",true)
+        FFI.setFrameRawEnable("video", true)
         MainActivity.rdClipboardManager?.setCaptureStarted(_isStart)
         return true
+    }
+
+    fun startCapture(): Boolean {
+        if (isStart) {
+            return true
+        }
+        
+        updateScreenInfo(resources.configuration.orientation)
+        Log.d(logTag, "Start Capture")
+        
+        // Try Knox capture first if available
+        if (isKnoxAvailable() && startKnoxCapture()) {
+            Log.i(logTag, "Using Knox screen capture")
+            isUsingKnox = true
+            _isStart = true
+            FFI.setFrameRawEnable("video", true)
+            MainActivity.rdClipboardManager?.setCaptureStarted(_isStart)
+            return true
+        }
+        
+        // Fallback to MediaProjection
+        Log.i(logTag, "Using MediaProjection screen capture")
+        isUsingKnox = false
+        return startMediaProjectionCapture()
     }
 
     @Synchronized
     fun stopCapture() {
         Log.d(logTag, "Stop Capture")
-        FFI.setFrameRawEnable("video",false)
+        FFI.setFrameRawEnable("video", false)
         _isStart = false
         MainActivity.rdClipboardManager?.setCaptureStarted(_isStart)
-        // release video
-        if (reuseVirtualDisplay) {
-            // The virtual display video projection can be paused by calling `setSurface(null)`.
-            // https://developer.android.com/reference/android/hardware/display/VirtualDisplay.Callback
-            // https://learn.microsoft.com/en-us/dotnet/api/android.hardware.display.virtualdisplay.callback.onpaused?view=net-android-34.0
-            virtualDisplay?.setSurface(null)
+        
+        if (isUsingKnox) {
+            // Knox cleanup
+            knoxCapturer?.releaseCapture()
+            knoxCapturer?.unbind()
+            knoxCapturer = null
+            isUsingKnox = false
         } else {
-            virtualDisplay?.release()
+            // MediaProjection cleanup (existing logic)
+            if (reuseVirtualDisplay) {
+                // The virtual display video projection can be paused by calling `setSurface(null)`.
+                // https://developer.android.com/reference/android/hardware/display/VirtualDisplay.Callback
+                // https://learn.microsoft.com/en-us/dotnet/api/android.hardware.display.virtualdisplay.callback.onpaused?view=net-android-34.0
+                virtualDisplay?.setSurface(null)
+            } else {
+                virtualDisplay?.release()
+            }
+            // suface needs to be release after `imageReader.close()` to imageReader access released surface
+            // https://github.com/rustdesk/rustdesk/issues/4118#issuecomment-1515666629
+            imageReader?.close()
+            imageReader = null
+            videoEncoder?.let {
+                it.signalEndOfInputStream()
+                it.stop()
+                it.release()
+            }
+            if (!reuseVirtualDisplay) {
+                virtualDisplay = null
+            }
+            videoEncoder = null
+            // suface needs to be release after `imageReader.close()` to imageReader access released surface
+            // https://github.com/rustdesk/rustdesk/issues/4118#issuecomment-1515666629
+            surface?.release()
         }
-        // suface needs to be release after `imageReader.close()` to imageReader access released surface
-        // https://github.com/rustdesk/rustdesk/issues/4118#issuecomment-1515666629
-        imageReader?.close()
-        imageReader = null
-        videoEncoder?.let {
-            it.signalEndOfInputStream()
-            it.stop()
-            it.release()
-        }
-        if (!reuseVirtualDisplay) {
-            virtualDisplay = null
-        }
-        videoEncoder = null
-        // suface needs to be release after `imageReader.close()` to imageReader access released surface
-        // https://github.com/rustdesk/rustdesk/issues/4118#issuecomment-1515666629
-        surface?.release()
-
+        
         // release audio
         _isAudioStart = false
         audioRecordHandle.tryReleaseAudio()
@@ -725,5 +798,152 @@ class MainService : Service() {
             .setContentText(text)
             .build()
         notificationManager.notify(DEFAULT_NOTIFY_ID, notification)
+    }
+
+    // Knox Capturer inner class for binding to external Knox service
+    private inner class KnoxCapturer {
+        private var captureService: ICaptureService? = null
+        private var isServiceBound = false
+        private val bindLock = Object()
+        
+        private val serviceConnection = object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+                Log.i(logTag, "Knox CaptureService connected")
+                captureService = ICaptureService.Stub.asInterface(service)
+                synchronized(bindLock) {
+                    isServiceBound = true
+                    bindLock.notifyAll()
+                }
+            }
+            
+            override fun onServiceDisconnected(name: ComponentName?) {
+                Log.w(logTag, "Knox CaptureService disconnected")
+                captureService = null
+                isServiceBound = false
+            }
+        }
+        
+        private val knoxFrameCallback = object : IFrameCallback.Stub() {
+            override fun onFrameAvailable(memory: SharedMemory, dirtyRegion: DirtyRegionData) {
+                if (!isStart) {
+                    Log.d(logTag, "Frame available but not capturing, ignoring")
+                    return
+                }
+                
+                // Optimization: Skip frames with no changes
+                if (!dirtyRegion.hasChanges) {
+                    Log.d(logTag, "No changes detected, skipping frame")
+                    return
+                }
+                
+                try {
+                    val byteBuffer = memory.mapReadWrite()
+                    byteBuffer.rewind()
+                    
+                    // Send RGBA buffer to RustDesk native layer
+                    // This uses the same FFI.onVideoFrameUpdate as MediaProjection
+                    FFI.onVideoFrameUpdate(byteBuffer)
+                    
+                    SharedMemory.unmap(byteBuffer)
+                } catch (e: Exception) {
+                    Log.e(logTag, "Error processing Knox frame", e)
+                }
+            }
+            
+            override fun onCaptureError(error: String) {
+                Log.e(logTag, "Knox capture error: $error")
+            }
+        }
+        
+        fun bind(): Boolean {
+            val intent = Intent().apply {
+                setClassName(KNOX_PACKAGE, KNOX_SERVICE)
+            }
+            
+            val bindResult = bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+            if (!bindResult) {
+                Log.e(logTag, "Failed to bind to Knox CaptureService")
+                return false
+            }
+            
+            // Wait for service connection with timeout
+            synchronized(bindLock) {
+                val startTime = System.currentTimeMillis()
+                while (!isServiceBound && 
+                       System.currentTimeMillis() - startTime < KNOX_BIND_TIMEOUT_MS) {
+                    try {
+                        bindLock.wait(100)
+                    } catch (e: InterruptedException) {
+                        Thread.currentThread().interrupt()
+                        break
+                    }
+                }
+            }
+            
+            if (!isServiceBound || captureService == null) {
+                Log.e(logTag, "Knox service binding timeout")
+                unbind()
+                return false
+            }
+            
+            return true
+        }
+        
+        fun initCapture(): Boolean {
+            val service = captureService ?: return false
+            
+            try {
+                service.initCapture()
+                service.registerFrameCallback(knoxFrameCallback)
+                
+                // Get screen dimensions from Knox
+                val knoxWidth = service.getScreenWidth()
+                val knoxHeight = service.getScreenHeight()
+                
+                if (knoxWidth <= 0 || knoxHeight <= 0) {
+                    Log.e(logTag, "Invalid Knox screen dimensions: ${knoxWidth}x${knoxHeight}")
+                    return false
+                }
+                
+                // Update RustDesk's screen info
+                updateScreenInfoForKnox(knoxWidth, knoxHeight)
+                
+                Log.i(logTag, "Knox capture initialized: ${knoxWidth}x${knoxHeight}")
+                return true
+            } catch (e: Exception) {
+                Log.e(logTag, "Failed to initialize Knox capture", e)
+                return false
+            }
+        }
+        
+        fun releaseCapture() {
+            try {
+                captureService?.unregisterFrameCallback()
+            } catch (e: Exception) {
+                Log.e(logTag, "Error unregistering Knox callback", e)
+            }
+        }
+        
+        fun unbind() {
+            if (isServiceBound) {
+                try {
+                    unbindService(serviceConnection)
+                } catch (e: Exception) {
+                    Log.e(logTag, "Error unbinding Knox service", e)
+                }
+                isServiceBound = false
+                captureService = null
+            }
+        }
+    }
+
+    private fun updateScreenInfoForKnox(width: Int, height: Int) {
+        // Update SCREEN_INFO to match Knox dimensions
+        SCREEN_INFO.width = width
+        SCREEN_INFO.height = height
+        // Keep existing DPI or use a reasonable default
+        if (SCREEN_INFO.dpi == 0) {
+            SCREEN_INFO.dpi = 240 // Reasonable default DPI
+        }
     }
 }

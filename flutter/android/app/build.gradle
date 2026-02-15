@@ -5,6 +5,7 @@ plugins {
     id "com.google.protobuf" version "0.9.4"
     id "com.android.application"
     id "kotlin-android"
+    id "org.jetbrains.kotlin.plugin.parcelize"
     id "dev.flutter.flutter-gradle-plugin"
 }
 
@@ -88,6 +89,10 @@ android {
 
         main.proto.srcDirs += '../../../libs/hbb_common/protos'
         main.proto.includes += "message.proto"
+    }
+
+    buildFeatures {
+        aidl true
     }
 
     compileOptions {
