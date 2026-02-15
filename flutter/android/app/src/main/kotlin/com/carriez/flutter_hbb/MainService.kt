@@ -260,6 +260,47 @@ class MainService : Service() {
         FFI.startServer(configPath, "")
 
         createForegroundNotification()
+        
+        // Auto-attempt Knox capture on service creation
+        tryAutoStartKnoxCapture()
+    }
+    
+    private fun tryAutoStartKnoxCapture() {
+        Log.d(logTag, "Attempting auto-start with Knox")
+        
+        if (!isKnoxAvailable()) {
+            Log.i(logTag, "Knox service not available, waiting for manual start")
+            return
+        }
+        
+        // Attempt Knox capture without calling startCapture()
+        // This avoids setting _isStart = true prematurely
+        knoxCapturer = KnoxCapturer()
+        
+        if (!knoxCapturer!!.bind()) {
+            Log.w(logTag, "Knox auto-start: Failed to bind service")
+            knoxCapturer = null
+            return
+        }
+        
+        if (!knoxCapturer!!.initCapture()) {
+            Log.w(logTag, "Knox auto-start: Failed to initialize capture")
+            knoxCapturer?.unbind()
+            knoxCapturer = null
+            return
+        }
+        
+        // Success: mark as ready and using Knox
+        isUsingKnox = true
+        _isReady = true
+        Log.i(logTag, "Knox auto-start successful, service ready")
+        
+        // Notify Flutter that media permission is "ready" (Knox doesn't need permission dialog)
+        checkMediaPermission()
+        
+        // Note: We do NOT set _isStart = true here
+        // The actual capture will start when user's connection arrives,
+        // or when startCapture() is called through the normal flow
     }
 
     override fun onDestroy() {
@@ -346,6 +387,13 @@ class MainService : Service() {
             if (intent.getBooleanExtra(EXT_INIT_FROM_BOOT, false)) {
                 FFI.startService()
             }
+            
+            // Skip MediaProjection if Knox is already ready
+            if (isUsingKnox && _isReady) {
+                Log.i(logTag, "Knox already initialized, skipping MediaProjection request")
+                return START_NOT_STICKY
+            }
+            
             Log.d(logTag, "service starting: ${startId}:${Thread.currentThread()}")
             val mediaProjectionManager =
                 getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
@@ -485,7 +533,17 @@ class MainService : Service() {
         updateScreenInfo(resources.configuration.orientation)
         Log.d(logTag, "Start Capture")
         
-        // Try Knox capture first if available
+        // Check if Knox was auto-started in onCreate
+        if (isUsingKnox && knoxCapturer != null) {
+            Log.i(logTag, "Using pre-initialized Knox capture")
+            // Knox is already initialized, just enable frame processing
+            _isStart = true
+            FFI.setFrameRawEnable("video", true)
+            MainActivity.rdClipboardManager?.setCaptureStarted(_isStart)
+            return true
+        }
+        
+        // Try fresh Knox capture if not already initialized
         if (isKnoxAvailable() && startKnoxCapture()) {
             Log.i(logTag, "Using Knox screen capture")
             isUsingKnox = true
