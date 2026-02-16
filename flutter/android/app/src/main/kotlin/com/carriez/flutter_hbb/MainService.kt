@@ -866,7 +866,7 @@ class MainService : Service() {
         
         private val serviceConnection = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-                Log.i(logTag, "Knox CaptureService connected")
+                Log.d(logTag, "Knox CaptureService connected(?): $name, $service")
                 captureService = ICaptureService.Stub.asInterface(service)
                 synchronized(bindLock) {
                     isServiceBound = true
@@ -919,12 +919,14 @@ class MainService : Service() {
             }
             
             val bindResult = bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+            Log.d(logTag, "bindService result: $bindResult")
             if (!bindResult) {
                 Log.e(logTag, "Failed to bind to Knox CaptureService")
                 return false
             }
             
             // Wait for service connection with timeout
+            // why is this using bindLock and not this? 
             synchronized(bindLock) {
                 val startTime = System.currentTimeMillis()
                 while (!isServiceBound && 
