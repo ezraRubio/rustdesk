@@ -130,6 +130,9 @@ Future<void> initEnv(String appType) async {
   _registerEventHandler();
   // Update the system theme.
   updateSystemWindowTheme();
+  if (isAndroid) {
+    gFFI.invokeMethod("init_service");
+  }
 }
 
 void runMainApp(bool startService) async {

@@ -203,7 +203,7 @@ class MainService : Service() {
     companion object {
         const val KNOX_PACKAGE = "il.co.tmg.screentool"
         const val KNOX_SERVICE = "il.co.tmg.screentool.service.CaptureService"
-        private const val KNOX_BIND_TIMEOUT_MS = 5000L
+        private const val KNOX_BIND_TIMEOUT_MS = 15000L
         
         private var _isReady = false // media permission ready status
         private var _isStart = false // screen capture start status
