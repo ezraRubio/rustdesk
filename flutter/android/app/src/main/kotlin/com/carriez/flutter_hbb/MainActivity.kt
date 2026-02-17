@@ -133,10 +133,18 @@ class MainActivity : FlutterActivity() {
                     Intent(activity, MainService::class.java).also {
                         bindService(it, serviceConnection, Context.BIND_AUTO_CREATE)
                     }
-                    if (MainService.isReady) {
-                        result.success(false)
-                        return@setMethodCallHandler
-                    }
+                    if (mainService?.knoxCapturer != null) {
+                        var waited = 0
+                        while (waited < 2000 && MainService.isReady) {
+                            Thread.sleep(100)
+                            waited += 100
+                        }
+                        if (waited >= 2000) {
+                            Log.w(logTag, "Knox auto-start timed out")
+                            result.success(false)
+                            return@setMethodCallHandler
+                        }
+                    } 
                     requestMediaProjection()
                     result.success(true)
                 }
