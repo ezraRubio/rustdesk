@@ -273,6 +273,17 @@ class MainService : Service() {
             return
         }
         
+        serviceHandler?.postDelayed({ attempKnoxBinding() }, 500)
+        
+        // Notify Flutter that media permission is "ready" (Knox doesn't need permission dialog)
+        checkMediaPermission()
+        
+        // Note: We do NOT set _isStart = true here
+        // The actual capture will start when user's connection arrives,
+        // or when startCapture() is called through the normal flow
+    }
+
+    private fun attempKnoxBinding() {
         // Attempt Knox capture without calling startCapture()
         // This avoids setting _isStart = true prematurely
         //this is doing the same as startKnoxCapture()
@@ -295,13 +306,6 @@ class MainService : Service() {
         isUsingKnox = true
         _isReady = true
         Log.i(logTag, "Knox auto-start successful, service ready")
-        
-        // Notify Flutter that media permission is "ready" (Knox doesn't need permission dialog)
-        checkMediaPermission()
-        
-        // Note: We do NOT set _isStart = true here
-        // The actual capture will start when user's connection arrives,
-        // or when startCapture() is called through the normal flow
     }
 
     override fun onDestroy() {
@@ -872,6 +876,7 @@ class MainService : Service() {
             override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
                 Log.d(logTag, "Knox CaptureService connected(?): $name, $service")
                 captureService = ICaptureService.Stub.asInterface(service)
+                Log.d(logTag, "Knox CaptureService connected: $captureService")
                 synchronized(bindLock) {
                     isServiceBound = true
                     bindLock.notifyAll()
