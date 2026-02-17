@@ -868,6 +868,7 @@ class MainService : Service() {
         private val bindLock = Object()
         
         private val serviceConnection = object : ServiceConnection {
+       //Do i need to implement also onBindingDied and/or onNullBinding? 
             override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
                 Log.d(logTag, "Knox CaptureService connected(?): $name, $service")
                 captureService = ICaptureService.Stub.asInterface(service)
@@ -881,6 +882,16 @@ class MainService : Service() {
                 Log.w(logTag, "Knox CaptureService disconnected")
                 captureService = null
                 isServiceBound = false
+            }
+
+            override fun onBindingDied(name: ComponentName?) {
+                Log.w(logTag, "Knox CaptureService binding died, attempting to rebind")
+                bind()
+            }
+
+            override fun onNullBinding(name: ComponentName?) {
+                Log.w(logTag, "Knox CaptureService null binding, attempting to rebind")
+                bind()
             }
         }
         
@@ -917,7 +928,7 @@ class MainService : Service() {
                 Log.e(logTag, "Knox capture error: $error")
             }
         }
-       //Do i need to implement also onBindingDied and/or onNullBinding? 
+ 
         fun bind(): Boolean {
             val intent = Intent().apply {
                 setClassName(KNOX_PACKAGE, KNOX_SERVICE)
