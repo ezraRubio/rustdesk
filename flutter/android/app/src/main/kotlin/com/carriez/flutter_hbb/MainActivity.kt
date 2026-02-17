@@ -133,7 +133,7 @@ class MainActivity : FlutterActivity() {
                     Intent(activity, MainService::class.java).also {
                         bindService(it, serviceConnection, Context.BIND_AUTO_CREATE)
                     }
-                    if (mainService?.knoxCapturer != null) {
+                    if (mainService?.isKnoxBindingInProgress() == true) {
                         var waited = 0
                         while (waited < 2000 && MainService.isReady) {
                             Thread.sleep(100)
@@ -145,7 +145,7 @@ class MainActivity : FlutterActivity() {
                             return@setMethodCallHandler
                         }
                     } 
-                    requestMediaProjection()
+                    // requestMediaProjection()
                     result.success(true)
                 }
                 "start_capture" -> {
