@@ -275,6 +275,7 @@ class MainService : Service() {
         
         // Attempt Knox capture without calling startCapture()
         // This avoids setting _isStart = true prematurely
+        //this is doing the same as startKnoxCapture()
         knoxCapturer = KnoxCapturer()
         
         if (!knoxCapturer!!.bind()) {
@@ -469,7 +470,9 @@ class MainService : Service() {
         val intent = Intent().apply {
             setClassName(KNOX_PACKAGE, KNOX_SERVICE)
         }
+        Log.d(logTag, "isKnoxAvailable: intent: $intent")
         val resolveInfo = packageManager.resolveService(intent, 0)
+        Log.d(logTag, "isKnoxAvailable: resolveInfo: $resolveInfo")
         val available = resolveInfo != null
         Log.d(logTag, "Knox service available: $available")
         return available
@@ -895,6 +898,7 @@ class MainService : Service() {
                 }
                 
                 try {
+                    //! there's no writing to the buffer, so why mapReadWrite instead of mapReadOnly?
                     val byteBuffer = memory.mapReadWrite()
                     byteBuffer.rewind()
                     
@@ -904,6 +908,7 @@ class MainService : Service() {
                     
                     SharedMemory.unmap(byteBuffer)
                 } catch (e: Exception) {
+                    //? do I need to unmap the buffer here?
                     Log.e(logTag, "Error processing Knox frame", e)
                 }
             }
@@ -912,7 +917,7 @@ class MainService : Service() {
                 Log.e(logTag, "Knox capture error: $error")
             }
         }
-        
+       //Do i need to implement also onBindingDied and/or onNullBinding? 
         fun bind(): Boolean {
             val intent = Intent().apply {
                 setClassName(KNOX_PACKAGE, KNOX_SERVICE)
@@ -928,11 +933,12 @@ class MainService : Service() {
             // Wait for service connection with timeout
             // why is this using bindLock and not this? 
             synchronized(bindLock) {
+                Log.d(logTag, "Waiting eternally for bindLock to be notified: $bindLock")
                 val startTime = System.currentTimeMillis()
-                while (!isServiceBound && 
-                       System.currentTimeMillis() - startTime < KNOX_BIND_TIMEOUT_MS) {
+                while (!isServiceBound) {
+                    //    System.currentTimeMillis() - startTime < KNOX_BIND_TIMEOUT_MS) {
                     try {
-                        bindLock.wait(100)
+                        bindLock.wait(600)
                     } catch (e: InterruptedException) {
                         Thread.currentThread().interrupt()
                         break
@@ -978,6 +984,7 @@ class MainService : Service() {
         
         fun releaseCapture() {
             try {
+                // is this a potential race condition?
                 captureService?.unregisterFrameCallback()
             } catch (e: Exception) {
                 Log.e(logTag, "Error unregistering Knox callback", e)
