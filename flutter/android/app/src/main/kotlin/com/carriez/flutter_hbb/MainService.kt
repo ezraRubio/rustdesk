@@ -514,8 +514,6 @@ class MainService : Service() {
         if (isStart) {
             return true
         }
-        
-        updateScreenInfo(resources.configuration.orientation)
         Log.d(logTag, "Start Capture")
         
         // Check if Knox was auto-started in onCreate
@@ -533,6 +531,7 @@ class MainService : Service() {
         }
         
         Log.i(logTag, "Using MediaProjection screen capture")
+        updateScreenInfo(resources.configuration.orientation)
         isUsingKnox = false
         return startMediaProjectionCapture()
     }
@@ -885,8 +884,7 @@ class MainService : Service() {
                 }
                 
                 try {
-                    //! there's no writing to the buffer, so why mapReadWrite instead of mapReadOnly?
-                    val byteBuffer = memory.mapReadWrite()
+                    val byteBuffer = memory.mapReadOnly()
                     byteBuffer.rewind()
                     
                     // Send RGBA buffer to RustDesk native layer
