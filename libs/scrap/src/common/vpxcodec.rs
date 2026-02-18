@@ -233,7 +233,20 @@ impl EncoderApi for VpxEncoder {
 impl VpxEncoder {
     pub fn encode<'a>(&'a mut self, pts: i64, data: &[u8], stride_align: usize) -> Result<EncodeFrames<'a>> {
         let bpp = if self.i444 { 24 } else { 12 };
-        if data.len() < self.width * self.height * bpp / 8 {
+        let expected_min_len = self.width * self.height * bpp / 8;
+        log::debug!(
+            "CAPTURE: VpxEncoder::encode data.len()={} width={} height={} expected_min_len={}",
+            data.len(),
+            self.width,
+            self.height,
+            expected_min_len
+        );
+        if data.len() < expected_min_len {
+            log::error!(
+                "CAPTURE: VpxEncoder::encode len not enough: data.len()={} < expected_min_len={}",
+                data.len(),
+                expected_min_len
+            );
             return Err(Error::FailedCall("len not enough".to_string()));
         }
         let fmt = if self.i444 {

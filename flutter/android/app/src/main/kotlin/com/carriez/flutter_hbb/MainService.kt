@@ -447,6 +447,9 @@ class MainService : Service() {
                                 val planes = image.planes
                                 val buffer = planes[0].buffer
                                 buffer.rewind()
+                                val remaining = buffer.remaining()
+                                val expectedRgba = SCREEN_INFO.width * SCREEN_INFO.height * 4
+                                Log.d(logTag, "CAPTURE: MediaProjection frame remaining=$remaining SCREEN_INFO=${SCREEN_INFO.width}x${SCREEN_INFO.height} expectedRGBA=$expectedRgba")
                                 FFI.onVideoFrameUpdate(buffer)
                             }
                         } catch (ignored: java.lang.Exception) {
@@ -886,7 +889,14 @@ class MainService : Service() {
                 try {
                     val byteBuffer = memory.mapReadOnly()
                     byteBuffer.rewind()
-                    
+                    val memSize = memory.size
+                    val cap = byteBuffer.capacity()
+                    val remaining = byteBuffer.remaining()
+                    val expectedRgba = SCREEN_INFO.width * SCREEN_INFO.height * 4
+                    Log.d(logTag, "CAPTURE: Knox onFrameAvailable memory.size=$memSize byteBuffer.capacity=$cap remaining=$remaining SCREEN_INFO=${SCREEN_INFO.width}x${SCREEN_INFO.height} expectedRGBA=$expectedRgba match=${remaining == expectedRgba}")
+                    if (remaining != expectedRgba) {
+                        Log.w(logTag, "CAPTURE: Knox buffer size MISMATCH: remaining=$remaining expected=$expectedRgba")
+                    }
                     // Send RGBA buffer to RustDesk native layer
                     // This uses the same FFI.onVideoFrameUpdate as MediaProjection
                     FFI.onVideoFrameUpdate(byteBuffer)

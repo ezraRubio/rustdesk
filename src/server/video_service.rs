@@ -721,6 +721,19 @@ fn run(vs: VideoService) -> ResultType<()> {
             Ok(frame) => {
                 repeat_encode_counter = 0;
                 if frame.valid() {
+                    match &frame {
+                        scrap::Frame::PixelBuffer(f) => {
+                            log::debug!(
+                                "CAPTURE: video_service got frame type=PixelBuffer width={} height={} data.len()={}",
+                                f.width(),
+                                f.height(),
+                                f.data().len()
+                            );
+                        }
+                        scrap::Frame::Texture(_) => {
+                            log::debug!("CAPTURE: video_service got frame type=Texture");
+                        }
+                    }
                     let screenshot = SCREENSHOTS.lock().unwrap().remove(&display_idx);
                     if let Some(mut screenshot) = screenshot {
                         let restore_vram = screenshot.restore_vram;
@@ -765,6 +778,7 @@ fn run(vs: VideoService) -> ResultType<()> {
                     }
 
                     let frame = frame.to(encoder.yuvfmt(), &mut yuv, &mut mid_data)?;
+                    log::debug!("CAPTURE: video_service frame.to success yuv.len()={}", yuv.len());
                     let send_conn_ids = handle_one_frame(
                         display_idx,
                         &sp,
@@ -1138,6 +1152,17 @@ fn handle_one_frame(
     width: usize,
     height: usize,
 ) -> ResultType<HashSet<i32>> {
+    let frame_desc = match &frame {
+        EncodeInput::YUV(y) => format!("EncodeInput::YUV len={}", y.len()),
+        EncodeInput::Texture(_) => "EncodeInput::Texture".to_owned(),
+    };
+    log::debug!(
+        "CAPTURE: handle_one_frame display={} width={} height={} {}",
+        display,
+        width,
+        height,
+        frame_desc
+    );
     sp.snapshot(|sps| {
         // so that new sub and old sub share the same encoder after switch
         if sps.has_subscribes() {
