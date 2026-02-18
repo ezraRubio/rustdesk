@@ -65,7 +65,7 @@ impl FrameRaw {
     fn update(&mut self, data: *mut u8, len: usize) {
         log::debug!("CAPTURE: FrameRaw::update name={} len={} enable={}", self.name, len, self.enable);
         if self.enable.not() {
-            log::debug!("CAPTURE: won't UPDATE frame raw because it's not enabled ") 
+            log::debug!("CAPTURE: won't UPDATE frame raw because it's not enabled "); 
             return;
         }
         self.len = len;
@@ -77,7 +77,7 @@ impl FrameRaw {
     // release when success
     fn take<'a>(&mut self, dst: &mut Vec<u8>, last: &mut Vec<u8>) -> Option<()> {
         if self.enable.not() {
-            log::debug!("CAPTURE: won't TAKE frame raw because it's not enabled ") 
+            log::debug!("CAPTURE: won't TAKE frame raw because it's not enabled "); 
             return None;
         }
         let ptr = self.ptr.load(SeqCst);

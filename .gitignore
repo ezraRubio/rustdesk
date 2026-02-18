@@ -52,6 +52,8 @@ lib/generated_bridge.dart
 examples/**/target/
 # ===
 vcpkg_installed
+# Nix flake: local vcpkg bootstrap (see NIX_ANDROID.md)
+.vcpkg-root
 flutter/lib/generated_plugin_registrant.dart
 libsciter.dylib
 flutter/web/
