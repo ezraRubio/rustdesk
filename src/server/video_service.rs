@@ -778,7 +778,7 @@ fn run(vs: VideoService) -> ResultType<()> {
                     }
 
                     let frame = frame.to(encoder.yuvfmt(), &mut yuv, &mut mid_data)?;
-                    log::debug!("CAPTURE: video_service frame.to success yuv.len()={}", yuv.len());
+                    log::debug!("CAPTURE: video_service frame.to success yuv.len()={}", frame.yuv().map(|y| y.len()).unwrap_or(0));
                     let send_conn_ids = handle_one_frame(
                         display_idx,
                         &sp,

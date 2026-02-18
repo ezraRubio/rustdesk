@@ -897,13 +897,9 @@ class MainService : Service() {
                     if (remaining != expectedRgba) {
                         Log.w(logTag, "CAPTURE: Knox buffer size MISMATCH: remaining=$remaining expected=$expectedRgba")
                     }
-                    // Send RGBA buffer to RustDesk native layer
-                    // This uses the same FFI.onVideoFrameUpdate as MediaProjection
                     FFI.onVideoFrameUpdate(byteBuffer)
-                    
-                    SharedMemory.unmap(byteBuffer)
+                    // SharedMemory.unmap(byteBuffer)
                 } catch (e: Exception) {
-                    //? do I need to unmap the buffer here?
                     Log.e(logTag, "Error processing Knox frame", e)
                 }
             }
