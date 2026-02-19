@@ -981,9 +981,10 @@ class MainService : Service() {
         
         fun releaseCapture() {
             synchronized(mappingLock) {
-                if (knoxMappedBuffer != null) {
+                val tmpbuf = knoxMappedBuffer
+                if (tmpbuf != null) {
                     try {
-                        SharedMemory.unmap(knoxMappedBuffer)
+                        SharedMemory.unmap(tmpbuf)
                     } catch (e: Exception) {
                         Log.e(logTag, "Error unmapping Knox buffer", e)
                     }
@@ -1000,14 +1001,15 @@ class MainService : Service() {
         
         fun unbind() {
             synchronized(mappingLock) {
-                if (knoxMappedBuffer != null) {
+                val tmpbuf = knoxMappedBuffer
+                if (tmpbuf != null) {
                     try {
-                        SharedMemory.unmap(knoxMappedBuffer)
+                        SharedMemory.unmap(tmpbuf)
                     } catch (e: Exception) {
                         Log.e(logTag, "Error unmapping Knox buffer on unbind", e)
                     }
-                    knoxMappedBuffer = null
                 }
+                knoxMappedBuffer = null
             }
             if (isServiceBound) {
                 try {
