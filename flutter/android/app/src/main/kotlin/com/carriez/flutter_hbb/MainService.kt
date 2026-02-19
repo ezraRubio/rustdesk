@@ -547,11 +547,7 @@ class MainService : Service() {
         MainActivity.rdClipboardManager?.setCaptureStarted(_isStart)
         
         if (isUsingKnox) {
-            // Knox cleanup
             knoxCapturer?.releaseCapture()
-            knoxCapturer?.unbind()
-            knoxCapturer = null
-            isUsingKnox = false
         } else {
             // MediaProjection cleanup (existing logic)
             if (reuseVirtualDisplay) {
@@ -992,7 +988,6 @@ class MainService : Service() {
                 }
             }
             try {
-                // is this a potential race condition?
                 captureService?.unregisterFrameCallback()
             } catch (e: Exception) {
                 Log.e(logTag, "Error unregistering Knox callback", e)
@@ -1000,17 +995,6 @@ class MainService : Service() {
         }
         
         fun unbind() {
-            synchronized(mappingLock) {
-                val tmpbuf = knoxMappedBuffer
-                if (tmpbuf != null) {
-                    try {
-                        SharedMemory.unmap(tmpbuf)
-                    } catch (e: Exception) {
-                        Log.e(logTag, "Error unmapping Knox buffer on unbind", e)
-                    }
-                }
-                knoxMappedBuffer = null
-            }
             if (isServiceBound) {
                 try {
                     unbindService(serviceConnection)
