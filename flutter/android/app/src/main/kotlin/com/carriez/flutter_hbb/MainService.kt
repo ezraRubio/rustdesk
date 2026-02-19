@@ -843,7 +843,10 @@ class MainService : Service() {
         private var captureService: ICaptureService? = null
         private var isServiceBound = false
         private val bindLock = Object()
-        
+        private val mappingLock = Object()
+        private var knoxMappedMemory: SharedMemory? = null
+        private var knoxMappedBuffer: ByteBuffer? = null
+
         private val serviceConnection = object : ServiceConnection {
        //Do i need to implement also onBindingDied and/or onNullBinding? 
             override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
@@ -887,18 +890,32 @@ class MainService : Service() {
                 }
                 
                 try {
-                    val byteBuffer = memory.mapReadOnly()
-                    byteBuffer.rewind()
-                    val memSize = memory.size
-                    val cap = byteBuffer.capacity()
-                    val remaining = byteBuffer.remaining()
+                    val buf = synchronized(mappingLock) {
+                        if (knoxMappedBuffer == null || knoxMappedMemory !== memory) {
+                            if (knoxMappedBuffer != null) {
+                                try {
+                                    knoxMappedMemory?.unmap(knoxMappedBuffer)
+                                } catch (e: Exception) {
+                                    Log.e(logTag, "Knox unmap previous buffer", e)
+                                }
+                                knoxMappedMemory = null
+                                knoxMappedBuffer = null
+                            }
+                            knoxMappedMemory = memory
+                            knoxMappedBuffer = memory.mapReadOnly()
+                        }
+                        knoxMappedBuffer
+                    }
+                    if (buf == null) return@onFrameAvailable
+                    buf.rewind()
+                    val cap = buf.capacity()
+                    val remaining = buf.remaining()
                     val expectedRgba = SCREEN_INFO.width * SCREEN_INFO.height * 4
-                    Log.d(logTag, "CAPTURE: Knox onFrameAvailable memory.size=$memSize byteBuffer.capacity=$cap remaining=$remaining SCREEN_INFO=${SCREEN_INFO.width}x${SCREEN_INFO.height} expectedRGBA=$expectedRgba match=${remaining == expectedRgba}")
+                    Log.d(logTag, "CAPTURE: Knox onFrameAvailable byteBuffer.capacity=$cap remaining=$remaining SCREEN_INFO=${SCREEN_INFO.width}x${SCREEN_INFO.height} expectedRGBA=$expectedRgba match=${remaining == expectedRgba}")
                     if (remaining != expectedRgba) {
                         Log.w(logTag, "CAPTURE: Knox buffer size MISMATCH: remaining=$remaining expected=$expectedRgba")
                     }
-                    FFI.onVideoFrameUpdate(byteBuffer)
-                    // SharedMemory.unmap(byteBuffer)
+                    FFI.onVideoFrameUpdate(buf)
                 } catch (e: Exception) {
                     Log.e(logTag, "Error processing Knox frame", e)
                 }
@@ -974,6 +991,17 @@ class MainService : Service() {
         }
         
         fun releaseCapture() {
+            synchronized(mappingLock) {
+                if (knoxMappedBuffer != null) {
+                    try {
+                        knoxMappedMemory?.unmap(knoxMappedBuffer)
+                    } catch (e: Exception) {
+                        Log.e(logTag, "Error unmapping Knox buffer", e)
+                    }
+                    knoxMappedMemory = null
+                    knoxMappedBuffer = null
+                }
+            }
             try {
                 // is this a potential race condition?
                 captureService?.unregisterFrameCallback()
@@ -983,6 +1011,17 @@ class MainService : Service() {
         }
         
         fun unbind() {
+            synchronized(mappingLock) {
+                if (knoxMappedBuffer != null) {
+                    try {
+                        knoxMappedMemory?.unmap(knoxMappedBuffer)
+                    } catch (e: Exception) {
+                        Log.e(logTag, "Error unmapping Knox buffer on unbind", e)
+                    }
+                    knoxMappedMemory = null
+                    knoxMappedBuffer = null
+                }
+            }
             if (isServiceBound) {
                 try {
                     unbindService(serviceConnection)

@@ -53,14 +53,15 @@ fn initialize(app_dir: &str, custom_client_config: &str) {
     #[cfg(target_os = "android")]
     {
         // flexi_logger can't work when android_logger initialized.
-        #[cfg(debug_assertions)]
+//! temp: force rust logs to display in logcat
+        // #[cfg(debug_assertions)]
         android_logger::init_once(
             android_logger::Config::default()
                 .with_max_level(log::LevelFilter::Debug) // limit log level
                 .with_tag("ffi"), // logs will show under mytag tag
         );
-        #[cfg(not(debug_assertions))]
-        hbb_common::init_log(false, "");
+        // #[cfg(not(debug_assertions))]
+        // hbb_common::init_log(false, "");
         #[cfg(feature = "mediacodec")]
         scrap::mediacodec::check_mediacodec();
         crate::common::test_rendezvous_server();
