@@ -248,7 +248,6 @@ class MainService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        Log.d(logTag,"MainService onCreate, sdk int:${Build.VERSION.SDK_INT} reuseVirtualDisplay:$reuseVirtualDisplay")
         FFI.init(this)
         HandlerThread("Service", Process.THREAD_PRIORITY_BACKGROUND).apply {
             start()
@@ -265,7 +264,6 @@ class MainService : Service() {
 
         createForegroundNotification()
         
-        // Auto-attempt Knox capture on service creation
         serviceHandler?.post{ tryAutoStartKnoxCapture() }
         
     }
@@ -369,7 +367,6 @@ class MainService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d("whichService", "this service: ${Thread.currentThread()}")
         super.onStartCommand(intent, flags, startId)
         if (intent?.action == ACT_INIT_MEDIA_PROJECTION_AND_SERVICE) {
             createForegroundNotification()
@@ -378,15 +375,12 @@ class MainService : Service() {
                 FFI.startService()
             }
             
-            // Skip MediaProjection if Knox is already ready
             synchronized(this) {
                 if (isUsingKnox && _isReady) {
-                    Log.i(logTag, "Knox already initialized, skipping MediaProjection request")
                     return START_NOT_STICKY
                 }
             }
             
-            Log.d(logTag, "service starting: ${startId}:${Thread.currentThread()}")
             if (knoxCapturer != null && !_isReady) {
                 Log.i(logTag, "Knox is available but binding in progress...")
                 serviceHandler?.postDelayed({
@@ -406,7 +400,6 @@ class MainService : Service() {
                 }, 2000)
                 return START_NOT_STICKY
             }
-            Log.i(logTag, "I think I should never reach this point, but in case, I'll request media projection")
             requestMediaProjection()
         }
         return START_NOT_STICKY // don't use sticky (auto restart), the new service (from auto restart) will lose control
@@ -449,7 +442,6 @@ class MainService : Service() {
                                 buffer.rewind()
                                 val remaining = buffer.remaining()
                                 val expectedRgba = SCREEN_INFO.width * SCREEN_INFO.height * 4
-                                Log.d(logTag, "CAPTURE: MediaProjection frame remaining=$remaining SCREEN_INFO=${SCREEN_INFO.width}x${SCREEN_INFO.height} expectedRGBA=$expectedRgba")
                                 FFI.onVideoFrameUpdate(buffer)
                             }
                         } catch (ignored: java.lang.Exception) {
@@ -473,17 +465,13 @@ class MainService : Service() {
         val intent = Intent().apply {
             setClassName(KNOX_PACKAGE, KNOX_SERVICE)
         }
-        Log.d(logTag, "isKnoxAvailable: intent: $intent")
         val resolveInfo = packageManager.resolveService(intent, 0)
-        Log.d(logTag, "isKnoxAvailable: resolveInfo: $resolveInfo")
         val available = resolveInfo != null
-        Log.d(logTag, "Knox service available: $available")
         return available
     }
 
 
     private fun startMediaProjectionCapture(): Boolean {
-        // Existing MediaProjection logic
         if (mediaProjection == null) {
             Log.w(logTag, "startCapture fail, mediaProjection is null")
             return false
@@ -519,10 +507,7 @@ class MainService : Service() {
         }
         Log.d(logTag, "Start Capture")
         
-        // Check if Knox was auto-started in onCreate
         if (isUsingKnox && knoxCapturer != null) {
-            Log.i(logTag, "Using pre-initialized Knox capture")
-            // Knox is already initialized, just enable frame processing
             if (!knoxCapturer!!.initCapture()) {
                 Log.w(logTag, "Knox auto-start: Failed to initialize capture")
                 return false
@@ -533,7 +518,6 @@ class MainService : Service() {
             return true
         }
         
-        Log.i(logTag, "Using MediaProjection screen capture")
         updateScreenInfo(resources.configuration.orientation)
         isUsingKnox = false
         return startMediaProjectionCapture()
@@ -549,7 +533,6 @@ class MainService : Service() {
         if (isUsingKnox) {
             knoxCapturer?.releaseCapture()
         } else {
-            // MediaProjection cleanup (existing logic)
             if (reuseVirtualDisplay) {
                 // The virtual display video projection can be paused by calling `setSurface(null)`.
                 // https://developer.android.com/reference/android/hardware/display/VirtualDisplay.Callback
@@ -834,7 +817,6 @@ class MainService : Service() {
         notificationManager.notify(DEFAULT_NOTIFY_ID, notification)
     }
 
-    // Knox Capturer inner class for binding to external Knox service
     private inner class KnoxCapturer {
         private var captureService: ICaptureService? = null
         private var isServiceBound = false
@@ -843,11 +825,9 @@ class MainService : Service() {
         private var knoxMappedBuffer: ByteBuffer? = null
 
         private val serviceConnection = object : ServiceConnection {
-       //Do i need to implement also onBindingDied and/or onNullBinding? 
             override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-                Log.d(logTag, "Knox CaptureService connected(?): $name, $service")
+                Log.d(logTag, "Knox CaptureService connected")
                 captureService = ICaptureService.Stub.asInterface(service)
-                Log.d(logTag, "Knox CaptureService connected: $captureService")
                 synchronized(bindLock) {
                     isServiceBound = true
                     bindLock.notifyAll()
@@ -878,7 +858,7 @@ class MainService : Service() {
                     return
                 }
                 
-                // Optimization: Skip frames with no changes
+                // This is not doing anything in my opinion 
                 if (!dirtyRegion.hasChanges) {
                     Log.d(logTag, "No changes detected, skipping frame")
                     return
@@ -893,13 +873,6 @@ class MainService : Service() {
                     }
                     if (buf == null) return@onFrameAvailable
                     buf.rewind()
-                    val cap = buf.capacity()
-                    val remaining = buf.remaining()
-                    val expectedRgba = SCREEN_INFO.width * SCREEN_INFO.height * 4
-                    Log.d(logTag, "CAPTURE: Knox onFrameAvailable byteBuffer.capacity=$cap remaining=$remaining SCREEN_INFO=${SCREEN_INFO.width}x${SCREEN_INFO.height} expectedRGBA=$expectedRgba match=${remaining == expectedRgba}")
-                    if (remaining != expectedRgba) {
-                        Log.w(logTag, "CAPTURE: Knox buffer size MISMATCH: remaining=$remaining expected=$expectedRgba")
-                    }
                     FFI.onVideoFrameUpdate(buf)
                 } catch (e: Exception) {
                     Log.e(logTag, "Error processing Knox frame", e)
@@ -917,19 +890,13 @@ class MainService : Service() {
             }
             
             val bindResult = bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
-            Log.d(logTag, "bindService result: $bindResult")
             if (!bindResult) {
                 Log.e(logTag, "Failed to bind to Knox CaptureService")
                 return false
             }
             
-            // Wait for service connection with timeout
-            // why is this using bindLock and not this? 
             synchronized(bindLock) {
-                Log.d(logTag, "Waiting eternally for bindLock to be notified: $bindLock")
-                val startTime = System.currentTimeMillis()
                 while (!isServiceBound) {
-                    //    System.currentTimeMillis() - startTime < KNOX_BIND_TIMEOUT_MS) {
                     try {
                         bindLock.wait(600)
                     } catch (e: InterruptedException) {
@@ -938,7 +905,7 @@ class MainService : Service() {
                     }
                 }
             }
-            
+
             if (!isServiceBound || captureService == null) {
                 Log.e(logTag, "Knox service binding timeout")
                 unbind()
@@ -955,19 +922,13 @@ class MainService : Service() {
                 service.initCapture()
                 service.registerFrameCallback(knoxFrameCallback)
                 
-                // Get screen dimensions from Knox
                 val knoxWidth = service.getScreenWidth()
                 val knoxHeight = service.getScreenHeight()
-                
                 if (knoxWidth <= 0 || knoxHeight <= 0) {
                     Log.e(logTag, "Invalid Knox screen dimensions: ${knoxWidth}x${knoxHeight}")
                     return false
                 }
-                
-                // Update RustDesk's screen info
                 updateScreenInfoForKnox(knoxWidth, knoxHeight)
-                
-                Log.i(logTag, "Knox capture initialized: ${knoxWidth}x${knoxHeight}")
                 return true
             } catch (e: Exception) {
                 Log.e(logTag, "Failed to initialize Knox capture", e)
@@ -977,10 +938,10 @@ class MainService : Service() {
         
         fun releaseCapture() {
             synchronized(mappingLock) {
-                val tmpbuf = knoxMappedBuffer
-                if (tmpbuf != null) {
+                val buf = knoxMappedBuffer
+                if (buf != null) {
                     try {
-                        SharedMemory.unmap(tmpbuf)
+                        SharedMemory.unmap(buf)
                     } catch (e: Exception) {
                         Log.e(logTag, "Error unmapping Knox buffer", e)
                     }
@@ -1008,12 +969,10 @@ class MainService : Service() {
     }
 
     private fun updateScreenInfoForKnox(width: Int, height: Int) {
-        // Update SCREEN_INFO to match Knox dimensions
         SCREEN_INFO.width = width
         SCREEN_INFO.height = height
-        // Keep existing DPI or use a reasonable default
         if (SCREEN_INFO.dpi == 0) {
-            SCREEN_INFO.dpi = 240 // Reasonable default DPI
+            SCREEN_INFO.dpi = 240
         }
     }
 }

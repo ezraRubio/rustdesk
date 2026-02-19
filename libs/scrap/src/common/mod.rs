@@ -195,15 +195,6 @@ impl Frame<'_> {
     ) -> ResultType<EncodeInput<'a>> {
         match self {
             Frame::PixelBuffer(pixelbuffer) => {
-                log::debug!(
-                    "CAPTURE: Frame::to PixelBuffer width={} height={} data.len()={} stride={:?} yuvfmt.w={} yuvfmt.h={}",
-                    pixelbuffer.width(),
-                    pixelbuffer.height(),
-                    pixelbuffer.data().len(),
-                    pixelbuffer.stride(),
-                    yuvfmt.w,
-                    yuvfmt.h
-                );
                 convert_to_yuv(&pixelbuffer, yuvfmt, yuv, mid_data)?;
                 Ok(EncodeInput::YUV(yuv))
             }

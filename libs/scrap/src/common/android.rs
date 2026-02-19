@@ -39,11 +39,6 @@ impl crate::TraitCapturer for Capturer {
         if get_video_raw(&mut self.rgba, &mut self.saved_raw_data).is_some() {
             let w = self.width();
             let h = self.height();
-            let expected_rgba = w * h * 4;
-            log::debug!("CAPTURE: Capturer::frame rgba.len={} width={} height={} expectedRGBA={}", self.rgba.len(), w, h, expected_rgba);
-            if self.rgba.len() != expected_rgba {
-                log::warn!("CAPTURE: Capturer::frame MISMATCH rgba.len={} != expectedRGBA={} (width={} height={})", self.rgba.len(), expected_rgba, w, h);
-            }
             Ok(Frame::PixelBuffer(PixelBuffer::new(
                 &self.rgba,
                 w,
@@ -65,14 +60,6 @@ pub struct PixelBuffer<'a> {
 impl<'a> PixelBuffer<'a> {
     pub fn new(data: &'a [u8], width: usize, height: usize) -> Self {
         let stride0 = if height > 0 { data.len() / height } else { 0 };
-        let expected_stride_rgba = width * 4;
-        log::debug!("CAPTURE: PixelBuffer::new data.len={} width={} height={} stride0={} expectedStrideRGBA={}", data.len(), width, height, stride0, expected_stride_rgba);
-        if stride0 < expected_stride_rgba {
-            log::warn!("CAPTURE: PixelBuffer::new stride0={} < expectedStrideRGBA={}", stride0, expected_stride_rgba);
-        }
-        if height > 0 && stride0 * height != data.len() {
-            log::warn!("CAPTURE: PixelBuffer::new stride0*height={} != data.len()={}", stride0 * height, data.len());
-        }
         let mut stride = Vec::new();
         stride.push(stride0);
         PixelBuffer {
@@ -125,7 +112,6 @@ impl Display {
         if size.0 == 0 || size.1 == 0 {
             *size = get_size().unwrap_or_default();
         }
-        log::debug!("CAPTURE: Display::primary using size=({}, {}, {})", size.0, size.1, size.2);
         Ok(Display {
             default: true,
             rect: Rect {
@@ -193,11 +179,9 @@ fn get_size() -> Option<(u16, u16, u16)> {
             let w = w.as_i64()? as _;
             let h = h.as_i64()? as _;
             let scale = scale.as_i64()? as _;
-            log::debug!("CAPTURE: get_size parsed w={} h={} scale={}", w, h, scale);
             return Some((w, h, scale));
         }
     }
-    log::debug!("CAPTURE: get_size failed to parse screen_size res={:?}", res);
     None
 }
 

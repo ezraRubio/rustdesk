@@ -25,20 +25,6 @@ pub fn convert_to_yuv(
     let src_pixfmt = captured.pixfmt();
     let src_width = captured.width();
     let src_height = captured.height();
-    let stride_height = src_stride.get(0).copied().unwrap_or(0) * src_height;
-    log::debug!(
-        "CAPTURE: convert_to_yuv src_width={} src_height={} src_stride[0]={} src.len()={} src_pixfmt={:?} dst_fmt.w={} dst_fmt.h={} dst_fmt.pixfmt={:?} stride*height={} src.len()>=stride*height={}",
-        src_width,
-        src_height,
-        src_stride.get(0).copied().unwrap_or(0),
-        src.len(),
-        src_pixfmt,
-        dst_fmt.w,
-        dst_fmt.h,
-        dst_fmt.pixfmt,
-        stride_height,
-        src.len() >= stride_height
-    );
     if src_width > dst_fmt.w || src_height > dst_fmt.h {
         bail!(
             "src rect > dst rect: ({src_width}, {src_height}) > ({},{})",
@@ -80,7 +66,6 @@ pub fn convert_to_yuv(
             let dst_stride_y = dst_fmt.stride[0];
             let dst_stride_uv = dst_fmt.stride[1];
             dst.resize(dst_fmt.h * dst_stride_y * 2, 0); // waste some memory to ensure memory safety
-            log::debug!("CAPTURE: convert_to_yuv I420 branch dst.len()={}", dst.len());
             let dst_y = dst.as_mut_ptr();
             let dst_u = dst[dst_fmt.u..].as_mut_ptr();
             let dst_v = dst[dst_fmt.v..].as_mut_ptr();

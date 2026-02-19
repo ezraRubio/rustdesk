@@ -723,15 +723,8 @@ fn run(vs: VideoService) -> ResultType<()> {
                 if frame.valid() {
                     match &frame {
                         scrap::Frame::PixelBuffer(f) => {
-                            log::debug!(
-                                "CAPTURE: video_service got frame type=PixelBuffer width={} height={} data.len()={}",
-                                f.width(),
-                                f.height(),
-                                f.data().len()
-                            );
                         }
                         scrap::Frame::Texture(_) => {
-                            log::debug!("CAPTURE: video_service got frame type=Texture");
                         }
                     }
                     let screenshot = SCREENSHOTS.lock().unwrap().remove(&display_idx);
@@ -778,7 +771,6 @@ fn run(vs: VideoService) -> ResultType<()> {
                     }
 
                     let frame = frame.to(encoder.yuvfmt(), &mut yuv, &mut mid_data)?;
-                    log::debug!("CAPTURE: video_service frame.to success yuv.len()={}", frame.yuv().map(|y| y.len()).unwrap_or(0));
                     let send_conn_ids = handle_one_frame(
                         display_idx,
                         &sp,
@@ -1156,13 +1148,6 @@ fn handle_one_frame(
         EncodeInput::YUV(y) => format!("EncodeInput::YUV len={}", y.len()),
         EncodeInput::Texture(_) => "EncodeInput::Texture".to_owned(),
     };
-    log::debug!(
-        "CAPTURE: handle_one_frame display={} width={} height={} {}",
-        display,
-        width,
-        height,
-        frame_desc
-    );
     sp.snapshot(|sps| {
         // so that new sub and old sub share the same encoder after switch
         if sps.has_subscribes() {

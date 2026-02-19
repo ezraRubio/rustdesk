@@ -63,9 +63,7 @@ impl FrameRaw {
     }
 
     fn update(&mut self, data: *mut u8, len: usize) {
-        log::debug!("CAPTURE: FrameRaw::update name={} len={} enable={}", self.name, len, self.enable);
         if self.enable.not() {
-            log::debug!("CAPTURE: won't UPDATE frame raw because it's not enabled "); 
             return;
         }
         self.len = len;
@@ -77,29 +75,24 @@ impl FrameRaw {
     // release when success
     fn take<'a>(&mut self, dst: &mut Vec<u8>, last: &mut Vec<u8>) -> Option<()> {
         if self.enable.not() {
-            log::debug!("CAPTURE: won't TAKE frame raw because it's not enabled "); 
             return None;
         }
         let ptr = self.ptr.load(SeqCst);
         if ptr.is_null() || self.len == 0 {
-            log::trace!("CAPTURE: FrameRaw::take name={} skip reason=null_or_zero_len", self.name);
             None
         } else {
             if self.last_update.elapsed() > self.timeout {
-                log::trace!("CAPTURE: FrameRaw::take name={} skip reason=timeout len={} last.len={}", self.name, self.len, last.len());
                 return None;
             }
             let slice = unsafe { std::slice::from_raw_parts(ptr, self.len) };
             self.release();
             if last.len() == slice.len() && crate::would_block_if_equal(last, slice).is_err() {
-                log::trace!("CAPTURE: FrameRaw::take name={} skip reason=would_block_if_equal len={} last.len={}", self.name, slice.len(), last.len());
                 return None;
             }
             dst.resize(slice.len(), 0);
             unsafe {
                 std::ptr::copy_nonoverlapping(slice.as_ptr(), dst.as_mut_ptr(), slice.len());
             }
-            log::debug!("CAPTURE: FrameRaw::take name={} took slice.len={} dst.len={}", self.name, slice.len(), dst.len());
             Some(())
         }
     }
@@ -135,7 +128,6 @@ pub extern "system" fn Java_ffi_FFI_onVideoFrameUpdate(
     let jb = JByteBuffer::from(buffer);
     if let Ok(data) = env.get_direct_buffer_address(&jb) {
         if let Ok(len) = env.get_direct_buffer_capacity(&jb) {
-            log::debug!("CAPTURE: onVideoFrameUpdate received len={} (video frame from Android)", len);
             VIDEO_RAW.lock().unwrap().update(data, len);
         }
     }
