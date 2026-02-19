@@ -844,7 +844,6 @@ class MainService : Service() {
         private var isServiceBound = false
         private val bindLock = Object()
         private val mappingLock = Object()
-        private var knoxMappedMemory: SharedMemory? = null
         private var knoxMappedBuffer: ByteBuffer? = null
 
         private val serviceConnection = object : ServiceConnection {
@@ -891,17 +890,7 @@ class MainService : Service() {
                 
                 try {
                     val buf = synchronized(mappingLock) {
-                        if (knoxMappedBuffer == null || knoxMappedMemory !== memory) {
-                            if (knoxMappedBuffer != null) {
-                                try {
-                                    knoxMappedMemory?.unmap(knoxMappedBuffer)
-                                } catch (e: Exception) {
-                                    Log.e(logTag, "Knox unmap previous buffer", e)
-                                }
-                                knoxMappedMemory = null
-                                knoxMappedBuffer = null
-                            }
-                            knoxMappedMemory = memory
+                        if (knoxMappedBuffer == null) {
                             knoxMappedBuffer = memory.mapReadOnly()
                         }
                         knoxMappedBuffer
@@ -994,11 +983,10 @@ class MainService : Service() {
             synchronized(mappingLock) {
                 if (knoxMappedBuffer != null) {
                     try {
-                        knoxMappedMemory?.unmap(knoxMappedBuffer)
+                        SharedMemory.unmap(knoxMappedBuffer)
                     } catch (e: Exception) {
                         Log.e(logTag, "Error unmapping Knox buffer", e)
                     }
-                    knoxMappedMemory = null
                     knoxMappedBuffer = null
                 }
             }
@@ -1014,11 +1002,10 @@ class MainService : Service() {
             synchronized(mappingLock) {
                 if (knoxMappedBuffer != null) {
                     try {
-                        knoxMappedMemory?.unmap(knoxMappedBuffer)
+                        SharedMemory.unmap(knoxMappedBuffer)
                     } catch (e: Exception) {
                         Log.e(logTag, "Error unmapping Knox buffer on unbind", e)
                     }
-                    knoxMappedMemory = null
                     knoxMappedBuffer = null
                 }
             }
