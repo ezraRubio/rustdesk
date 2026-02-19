@@ -369,38 +369,42 @@ class MainService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
         if (intent?.action == ACT_INIT_MEDIA_PROJECTION_AND_SERVICE) {
-            createForegroundNotification()
+            // Post to serviceHandler so this runs after tryAutoStartKnoxCapture() from onCreate().
+            val startIntent = intent
+            serviceHandler?.post {
+                createForegroundNotification()
 
-            if (intent.getBooleanExtra(EXT_INIT_FROM_BOOT, false)) {
-                FFI.startService()
-            }
-            
-            synchronized(this) {
-                if (isUsingKnox && _isReady) {
-                    return START_NOT_STICKY
+                if (startIntent.getBooleanExtra(EXT_INIT_FROM_BOOT, false)) {
+                    FFI.startService()
                 }
-            }
-            
-            if (knoxCapturer != null && !_isReady) {
-                Log.i(logTag, "Knox is available but binding in progress...")
-                serviceHandler?.postDelayed({
-                    if (!_isReady) {
-                        val mediaProjectionManager =
-                            getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-                        intent.getParcelableExtra<Intent>(EXT_MEDIA_PROJECTION_RES_INTENT)?.let {
-                            mediaProjection =
-                                mediaProjectionManager.getMediaProjection(Activity.RESULT_OK, it)
-                            checkMediaPermission()
-                            _isReady = true
-                        } ?: let {
-                            Log.d(logTag, "getParcelableExtra intent null, invoke requestMediaProjection")
-                            requestMediaProjection()
-                        }
+
+                synchronized(this@MainService) {
+                    if (isUsingKnox && _isReady) {
+                        return@post
                     }
-                }, 2000)
-                return START_NOT_STICKY
+                }
+
+                if (knoxCapturer != null && !_isReady) {
+                    Log.i(logTag, "Knox is available but binding in progress...")
+                    serviceHandler?.postDelayed({
+                        if (!_isReady) {
+                            val mediaProjectionManager =
+                                getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+                            startIntent.getParcelableExtra<Intent>(EXT_MEDIA_PROJECTION_RES_INTENT)?.let {
+                                mediaProjection =
+                                    mediaProjectionManager.getMediaProjection(Activity.RESULT_OK, it)
+                                checkMediaPermission()
+                                _isReady = true
+                            } ?: let {
+                                Log.d(logTag, "getParcelableExtra intent null, invoke requestMediaProjection")
+                                requestMediaProjection()
+                            }
+                        }
+                    }, 2000)
+                    return@post
+                }
+                requestMediaProjection()
             }
-            requestMediaProjection()
         }
         return START_NOT_STICKY // don't use sticky (auto restart), the new service (from auto restart) will lose control
     }

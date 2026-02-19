@@ -16,16 +16,15 @@ class PermissionRequestTransparentActivity: Activity() {
         Log.d(logTag, "Negating it .l.")
         finish()
 
-        // For debug purpose, I've eliminated every path to request media projection
-        // when (intent.action) {
-        //     ACT_REQUEST_MEDIA_PROJECTION -> {
-        //         val mediaProjectionManager =
-        //             getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-        //         val intent = mediaProjectionManager.createScreenCaptureIntent()
-        //         startActivityForResult(intent, REQ_REQUEST_MEDIA_PROJECTION)
-        //     }
-        //     else -> finish()
-        // }
+        when (intent.action) {
+            ACT_REQUEST_MEDIA_PROJECTION -> {
+                val mediaProjectionManager =
+                    getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+                val intent = mediaProjectionManager.createScreenCaptureIntent()
+                startActivityForResult(intent, REQ_REQUEST_MEDIA_PROJECTION)
+            }
+            else -> finish()
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

@@ -135,7 +135,7 @@ class MainActivity : FlutterActivity() {
                     }
                     if (mainService?.isKnoxBindingInProgress() == true) {
                         var waited = 0
-                        while (waited < 2000 && MainService.isReady) {
+                        while (waited < 2000 && !MainService.isReady) {
                             Thread.sleep(100)
                             waited += 100
                         }
@@ -145,7 +145,7 @@ class MainActivity : FlutterActivity() {
                             return@setMethodCallHandler
                         }
                     } 
-                    // requestMediaProjection()
+                    requestMediaProjection()
                     result.success(true)
                 }
                 "start_capture" -> {
@@ -409,7 +409,7 @@ class MainActivity : FlutterActivity() {
 
     override fun onStop() {
         super.onStop()
-        val disableFloatingWindow = FFI.getLocalOption("disable-floating-window") == "Y"
+        val disableFloatingWindow = true//FFI.getLocalOption("disable-floating-window") == "Y"
         if (!disableFloatingWindow && MainService.isReady) {
             startService(Intent(this, FloatingWindowService::class.java))
         }
