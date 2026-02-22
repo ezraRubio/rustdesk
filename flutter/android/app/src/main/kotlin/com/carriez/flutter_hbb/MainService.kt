@@ -51,6 +51,8 @@ import kotlin.math.min
 import il.co.tmg.screentool.ICaptureService
 import il.co.tmg.screentool.IFrameCallback
 import il.co.tmg.screentool.DirtyRegionData
+import hbb.KeyEventConverter
+import hbb.MessageOuterClass.KeyEvent as ProtoKeyEvent
 
 const val DEFAULT_NOTIFY_TITLE = "RustDesk"
 const val DEFAULT_NOTIFY_TEXT = "Service is running"
@@ -80,14 +82,25 @@ class MainService : Service() {
             Log.d(logTag,"Turn on Screen")
             wakeLock.acquire(5000)
         } else {
-            when (kind) {
-                0 -> { // touch
-                    InputService.ctx?.onTouchInput(mask, x, y)
+            val knoxService = knoxCapturer?.getCaptureService()
+            Log.d(logTag, "Knox service: $knoxService")
+            if (isUsingKnox && knoxService != null) {
+                try {
+                    Log.d(logTag, "Knox injectPointer: kind=$kind, mask=$mask, x=$x, y=$y")
+                    knoxService.injectPointer(kind, mask, x, y)
+                } catch (e: Exception) {
+                    Log.d(logTag, "Knox injectPointer failed: ${e.message}")
                 }
-                1 -> { // mouse
-                    InputService.ctx?.onMouseInput(mask, x, y)
-                }
-                else -> {
+            } else {
+                when (kind) {
+                    0 -> { // touch
+                        InputService.ctx?.onTouchInput(mask, x, y)
+                    }
+                    1 -> { // mouse
+                        InputService.ctx?.onMouseInput(mask, x, y)
+                    }
+                    else -> {
+                    }
                 }
             }
         }
@@ -96,7 +109,24 @@ class MainService : Service() {
     @Keep
     @RequiresApi(Build.VERSION_CODES.N)
     fun rustKeyEventInput(input: ByteArray) {
-        InputService.ctx?.onKeyEvent(input)
+        val knoxService = knoxCapturer?.getCaptureService()
+        Log.d(logTag, "Knox service: $knoxService")
+        if (isUsingKnox && knoxService != null) {
+            try {
+                val proto = ProtoKeyEvent.parseFrom(input)
+                val androidEv = KeyEventConverter.toAndroidKeyEvent(proto)
+                val keyCode = androidEv.keyCode
+                val modifiers = androidEv.metaState
+                val sendDown = proto.down || proto.press
+                val sendUp = !proto.down || proto.press
+                Log.d(logTag, "Knox injectKeyEvent: keyCode=$keyCode, modifiers=$modifiers, sendDown=$sendDown, sendUp=$sendUp")
+                knoxService.injectKeyEvent(keyCode, modifiers, sendDown, sendUp)
+            } catch (e: Exception) {
+                Log.d(logTag, "Knox injectKeyEventParsed failed: ${e.message}")
+            }
+        } else {
+            InputService.ctx?.onKeyEvent(input)
+        }
     }
 
     @Keep
@@ -970,6 +1000,8 @@ class MainService : Service() {
                 captureService = null
             }
         }
+
+        fun getCaptureService(): ICaptureService? = captureService
     }
 
     private fun updateScreenInfoForKnox(width: Int, height: Int) {
