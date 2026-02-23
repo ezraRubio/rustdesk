@@ -73,7 +73,9 @@ class MainService : Service() {
     @RequiresApi(Build.VERSION_CODES.N)
     fun rustPointerInput(kind: Int, mask: Int, x: Int, y: Int) {
         // turn on screen with LEFT_DOWN when screen off
-        if (!powerManager.isInteractive && (kind == 0 || mask == LEFT_DOWN)) {
+        val isInteractive = powerManager.isInteractive
+        Log.d(logTag, "isInteractive: $isInteractive")
+        if (!isInteractive && (kind == 0 || mask == LEFT_DOWN)) {
             if (wakeLock.isHeld) {
                 Log.d(logTag, "Turn on Screen, WakeLock release")
                 wakeLock.release()
@@ -85,7 +87,7 @@ class MainService : Service() {
             if (isUsingKnox && knoxService != null) {
                 try {
                     Log.d(logTag, "Knox injectPointer: kind=$kind, mask=$mask, x=$x, y=$y")
-                    knoxService.injectPointer(kind, mask, x, y, !powerManager.isInteractive)
+                    knoxService.injectPointer(kind, mask, x, y, !isInteractive)
                 } catch (e: Exception) {
                     Log.d(logTag, "Knox injectPointer failed: ${e.message}")
                 }
@@ -226,7 +228,7 @@ class MainService : Service() {
     private var serviceHandler: Handler? = null
 
     private val powerManager: PowerManager by lazy { applicationContext.getSystemService(Context.POWER_SERVICE) as PowerManager }
-    private val wakeLock: PowerManager.WakeLock by lazy { powerManager.newWakeLock(PowerManager.ACQUIRE_CAUSES_WAKEUP or PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.PARTIAL_WAKE_LOCK, "rustdesk:wakelock")}
+    private val wakeLock: PowerManager.WakeLock by lazy { powerManager.newWakeLock(PowerManager.ACQUIRE_CAUSES_WAKEUP or PowerManager.SCREEN_BRIGHT_WAKE_LOCK, "rustdesk:wakelock")}
 
     companion object {
         const val KNOX_PACKAGE = "il.co.tmg.screentool"
