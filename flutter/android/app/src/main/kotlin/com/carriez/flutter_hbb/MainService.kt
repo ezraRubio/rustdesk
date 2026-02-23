@@ -80,19 +80,12 @@ class MainService : Service() {
             }
             Log.d(logTag,"Turn on Screen")
             wakeLock.acquire(5000)
-            try {
-                Log.d(logTag, "PowerManager.wakeUp via reflection")
-                val wakeUpMethod = powerManager.javaClass.getMethod("wakeUp", Long::class.javaPrimitiveType)
-                wakeUpMethod.invoke(powerManager, SystemClock.uptimeMillis())
-            } catch (e: Exception) {
-                Log.w(logTag, "PowerManager.wakeUp via reflection failed: ${e.message}")
-            }
         } else {
             val knoxService = knoxCapturer?.getCaptureService()
             if (isUsingKnox && knoxService != null) {
                 try {
                     Log.d(logTag, "Knox injectPointer: kind=$kind, mask=$mask, x=$x, y=$y")
-                    knoxService.injectPointer(kind, mask, x, y)
+                    knoxService.injectPointer(kind, mask, x, y, !powerManager.isInteractive)
                 } catch (e: Exception) {
                     Log.d(logTag, "Knox injectPointer failed: ${e.message}")
                 }

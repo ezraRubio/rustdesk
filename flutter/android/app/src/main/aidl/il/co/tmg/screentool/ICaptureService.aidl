@@ -12,6 +12,6 @@ interface ICaptureService {
     int getScreenWidth();
     int getScreenHeight();
 
-    void injectPointer(int kind, int mask, int x, int y);
+    void injectPointer(int kind, int mask, int x, int y, boolean wakeUp);
     void injectKeyEvent(int keyCode, int modifiers, boolean sendDown, boolean sendUp);
 }
