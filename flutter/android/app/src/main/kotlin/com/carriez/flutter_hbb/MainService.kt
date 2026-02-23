@@ -81,9 +81,9 @@ class MainService : Service() {
             }
             Log.d(logTag,"Turn on Screen")
             wakeLock.acquire(5000)
+            PowerManager.wakeUp(SystemClock.uptimeMillis())
         } else {
             val knoxService = knoxCapturer?.getCaptureService()
-            Log.d(logTag, "Knox service: $knoxService")
             if (isUsingKnox && knoxService != null) {
                 try {
                     Log.d(logTag, "Knox injectPointer: kind=$kind, mask=$mask, x=$x, y=$y")
@@ -228,7 +228,7 @@ class MainService : Service() {
     private var serviceHandler: Handler? = null
 
     private val powerManager: PowerManager by lazy { applicationContext.getSystemService(Context.POWER_SERVICE) as PowerManager }
-    private val wakeLock: PowerManager.WakeLock by lazy { powerManager.newWakeLock(PowerManager.ACQUIRE_CAUSES_WAKEUP or PowerManager.SCREEN_BRIGHT_WAKE_LOCK, "rustdesk:wakelock")}
+    private val wakeLock: PowerManager.WakeLock by lazy { powerManager.newWakeLock(PowerManager.ACQUIRE_CAUSES_WAKEUP or PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.PARTIAL_WAKE_LOCK, "rustdesk:wakelock")}
 
     companion object {
         const val KNOX_PACKAGE = "il.co.tmg.screentool"
@@ -886,15 +886,9 @@ class MainService : Service() {
         }
         
         private val knoxFrameCallback = object : IFrameCallback.Stub() {
-            override fun onFrameAvailable(memory: SharedMemory, dirtyRegion: DirtyRegionData) {
+            override fun onFrameAvailable(memory: SharedMemory) {
                 if (!isStart) {
                     Log.d(logTag, "Frame available but not capturing, ignoring")
-                    return
-                }
-                
-                // This is not doing anything in my opinion 
-                if (!dirtyRegion.hasChanges) {
-                    Log.d(logTag, "No changes detected, skipping frame")
                     return
                 }
                 
