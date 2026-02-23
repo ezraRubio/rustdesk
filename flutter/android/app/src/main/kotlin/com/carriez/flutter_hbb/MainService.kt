@@ -50,7 +50,6 @@ import kotlin.math.max
 import kotlin.math.min
 import il.co.tmg.screentool.ICaptureService
 import il.co.tmg.screentool.IFrameCallback
-import il.co.tmg.screentool.DirtyRegionData
 import hbb.KeyEventConverter
 import hbb.MessageOuterClass.KeyEvent as ProtoKeyEvent
 
@@ -81,7 +80,13 @@ class MainService : Service() {
             }
             Log.d(logTag,"Turn on Screen")
             wakeLock.acquire(5000)
-            PowerManager.wakeUp(SystemClock.uptimeMillis())
+            try {
+                Log.d(logTag, "PowerManager.wakeUp via reflection")
+                val wakeUpMethod = powerManager.javaClass.getMethod("wakeUp", Long::class.javaPrimitiveType)
+                wakeUpMethod.invoke(powerManager, SystemClock.uptimeMillis())
+            } catch (e: Exception) {
+                Log.w(logTag, "PowerManager.wakeUp via reflection failed: ${e.message}")
+            }
         } else {
             val knoxService = knoxCapturer?.getCaptureService()
             if (isUsingKnox && knoxService != null) {
