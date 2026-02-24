@@ -17,8 +17,6 @@ import android.app.PendingIntent.FLAG_UPDATE_CURRENT
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.content.ComponentName
-import android.content.ServiceConnection
 import android.content.res.Configuration
 import android.content.res.Configuration.ORIENTATION_LANDSCAPE
 import android.graphics.Color
@@ -29,7 +27,6 @@ import android.media.*
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.*
-import android.os.IBinder
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.Surface
@@ -48,10 +45,6 @@ import org.json.JSONObject
 import java.nio.ByteBuffer
 import kotlin.math.max
 import kotlin.math.min
-import il.co.tmg.screentool.ICaptureService
-import il.co.tmg.screentool.IFrameCallback
-import hbb.KeyEventConverter
-import hbb.MessageOuterClass.KeyEvent as ProtoKeyEvent
 
 const val DEFAULT_NOTIFY_TITLE = "RustDesk"
 const val DEFAULT_NOTIFY_TEXT = "Service is running"
@@ -74,7 +67,6 @@ class MainService : Service() {
     fun rustPointerInput(kind: Int, mask: Int, x: Int, y: Int) {
         // turn on screen with LEFT_DOWN when screen off
         val isInteractive = powerManager.isInteractive
-        Log.d(logTag, "isInteractive: $isInteractive")
         if (!isInteractive && (kind == 0 || mask == LEFT_DOWN)) {
             if (wakeLock.isHeld) {
                 Log.d(logTag, "Turn on Screen, WakeLock release")
@@ -83,14 +75,8 @@ class MainService : Service() {
             Log.d(logTag,"Turn on Screen")
             wakeLock.acquire(5000)
         } else {
-            val knoxService = knoxCapturer?.getCaptureService()
-            if (isUsingKnox && knoxService != null) {
-                try {
-                    Log.d(logTag, "Knox injectPointer: kind=$kind, mask=$mask, x=$x, y=$y")
-                    knoxService.injectPointer(kind, mask, x, y, !isInteractive)
-                } catch (e: Exception) {
-                    Log.d(logTag, "Knox injectPointer failed: ${e.message}")
-                }
+            if (isUsingKnox) {
+                knoxCapturer?.injectPointer(kind, mask, x, y, !isInteractive)
             } else {
                 when (kind) {
                     0 -> { // touch
@@ -109,21 +95,8 @@ class MainService : Service() {
     @Keep
     @RequiresApi(Build.VERSION_CODES.N)
     fun rustKeyEventInput(input: ByteArray) {
-        val knoxService = knoxCapturer?.getCaptureService()
-        Log.d(logTag, "Knox service: $knoxService")
-        if (isUsingKnox && knoxService != null) {
-            try {
-                val proto = ProtoKeyEvent.parseFrom(input)
-                val androidEv = KeyEventConverter.toAndroidKeyEvent(proto)
-                val keyCode = androidEv.keyCode
-                val modifiers = androidEv.metaState
-                val sendDown = proto.down || proto.press
-                val sendUp = !proto.down || proto.press
-                Log.d(logTag, "Knox injectKeyEvent: keyCode=$keyCode, modifiers=$modifiers, sendDown=$sendDown, sendUp=$sendUp")
-                knoxService.injectKeyEvent(keyCode, modifiers, sendDown, sendUp)
-            } catch (e: Exception) {
-                Log.d(logTag, "Knox injectKeyEventParsed failed: ${e.message}")
-            }
+        if (isUsingKnox) {
+            knoxCapturer?.injectKeyEvent(input)
         } else {
             InputService.ctx?.onKeyEvent(input)
         }
@@ -231,10 +204,6 @@ class MainService : Service() {
     private val wakeLock: PowerManager.WakeLock by lazy { powerManager.newWakeLock(PowerManager.ACQUIRE_CAUSES_WAKEUP or PowerManager.SCREEN_BRIGHT_WAKE_LOCK, "rustdesk:wakelock")}
 
     companion object {
-        const val KNOX_PACKAGE = "il.co.tmg.screentool"
-        const val KNOX_SERVICE = "il.co.tmg.screentool.service.CaptureService"
-        private const val KNOX_BIND_TIMEOUT_MS = 15000L
-        
         private var _isReady = false // media permission ready status
         private var _isStart = false // screen capture start status
         private var _isAudioStart = false // audio capture start status
@@ -300,14 +269,14 @@ class MainService : Service() {
     
     private fun tryAutoStartKnoxCapture() {
         Log.d(logTag, "Attempting auto-start with Knox")
-        
-        if (!isKnoxAvailable()) {
+
+        if (!isKnoxAvailable(this)) {
             Log.i(logTag, "Knox service not available, waiting for manual start")
             return
         }
 
-        knoxCapturer = KnoxCapturer()
-        
+        knoxCapturer = KnoxCapturer(this, serviceHandler!!, { isStart })
+
         if (knoxCapturer!!.bind()) {
             synchronized(this) {
                 isUsingKnox = true
@@ -474,8 +443,6 @@ class MainService : Service() {
                                 val planes = image.planes
                                 val buffer = planes[0].buffer
                                 buffer.rewind()
-                                val remaining = buffer.remaining()
-                                val expectedRgba = SCREEN_INFO.width * SCREEN_INFO.height * 4
                                 FFI.onVideoFrameUpdate(buffer)
                             }
                         } catch (ignored: java.lang.Exception) {
@@ -494,16 +461,6 @@ class MainService : Service() {
     fun onVoiceCallClosed(): Boolean {
         return audioRecordHandle.onVoiceCallClosed(mediaProjection)
     }
-
-    private fun isKnoxAvailable(): Boolean {
-        val intent = Intent().apply {
-            setClassName(KNOX_PACKAGE, KNOX_SERVICE)
-        }
-        val resolveInfo = packageManager.resolveService(intent, 0)
-        val available = resolveInfo != null
-        return available
-    }
-
 
     private fun startMediaProjectionCapture(): Boolean {
         if (mediaProjection == null) {
@@ -604,6 +561,9 @@ class MainService : Service() {
         _isAudioStart = false
 
         stopCapture()
+        knoxCapturer?.unbind()
+        knoxCapturer = null
+        isUsingKnox = false
 
         if (reuseVirtualDisplay) {
             virtualDisplay?.release()
@@ -849,160 +809,5 @@ class MainService : Service() {
             .setContentText(text)
             .build()
         notificationManager.notify(DEFAULT_NOTIFY_ID, notification)
-    }
-
-    private inner class KnoxCapturer {
-        private var captureService: ICaptureService? = null
-        private var isServiceBound = false
-        private val bindLock = Object()
-        private val mappingLock = Object()
-        private var knoxMappedBuffer: ByteBuffer? = null
-
-        private val serviceConnection = object : ServiceConnection {
-            override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-                Log.d(logTag, "Knox CaptureService connected")
-                captureService = ICaptureService.Stub.asInterface(service)
-                synchronized(bindLock) {
-                    isServiceBound = true
-                    bindLock.notifyAll()
-                }
-            }
-            
-            override fun onServiceDisconnected(name: ComponentName?) {
-                Log.w(logTag, "Knox CaptureService disconnected")
-                captureService = null
-                isServiceBound = false
-            }
-
-            override fun onBindingDied(name: ComponentName?) {
-                Log.w(logTag, "Knox CaptureService binding died, attempting to rebind")
-                bind()
-            }
-
-            override fun onNullBinding(name: ComponentName?) {
-                Log.w(logTag, "Knox CaptureService null binding, attempting to rebind")
-                bind()
-            }
-        }
-        
-        private val knoxFrameCallback = object : IFrameCallback.Stub() {
-            override fun onFrameAvailable(memory: SharedMemory) {
-                if (!isStart) {
-                    Log.d(logTag, "Frame available but not capturing, ignoring")
-                    return
-                }
-                
-                try {
-                    val buf = synchronized(mappingLock) {
-                        if (knoxMappedBuffer == null) {
-                            knoxMappedBuffer = memory.mapReadOnly()
-                        }
-                        knoxMappedBuffer
-                    }
-                    if (buf == null) return@onFrameAvailable
-                    buf.rewind()
-                    FFI.onVideoFrameUpdate(buf)
-                } catch (e: Exception) {
-                    Log.e(logTag, "Error processing Knox frame", e)
-                }
-            }
-            
-            override fun onCaptureError(error: String) {
-                Log.e(logTag, "Knox capture error: $error")
-            }
-        }
- 
-        fun bind(): Boolean {
-            val intent = Intent().apply {
-                setClassName(KNOX_PACKAGE, KNOX_SERVICE)
-            }
-            
-            val bindResult = bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
-            if (!bindResult) {
-                Log.e(logTag, "Failed to bind to Knox CaptureService")
-                return false
-            }
-            
-            synchronized(bindLock) {
-                while (!isServiceBound) {
-                    try {
-                        bindLock.wait(600)
-                    } catch (e: InterruptedException) {
-                        Thread.currentThread().interrupt()
-                        break
-                    }
-                }
-            }
-
-            if (!isServiceBound || captureService == null) {
-                Log.e(logTag, "Knox service binding timeout")
-                unbind()
-                return false
-            }
-            
-            return true
-        }
-        
-        fun initCapture(): Boolean {
-            val service = captureService ?: return false
-            
-            try {
-                service.initCapture()
-                service.registerFrameCallback(knoxFrameCallback)
-                
-                val knoxWidth = service.getScreenWidth()
-                val knoxHeight = service.getScreenHeight()
-                if (knoxWidth <= 0 || knoxHeight <= 0) {
-                    Log.e(logTag, "Invalid Knox screen dimensions: ${knoxWidth}x${knoxHeight}")
-                    return false
-                }
-                updateScreenInfoForKnox(knoxWidth, knoxHeight)
-                return true
-            } catch (e: Exception) {
-                Log.e(logTag, "Failed to initialize Knox capture", e)
-                return false
-            }
-        }
-        
-        fun releaseCapture() {
-            synchronized(mappingLock) {
-                val buf = knoxMappedBuffer
-                if (buf != null) {
-                    try {
-                        SharedMemory.unmap(buf)
-                    } catch (e: Exception) {
-                        Log.e(logTag, "Error unmapping Knox buffer", e)
-                    }
-                    knoxMappedBuffer = null
-                }
-            }
-            try {
-                captureService?.unregisterFrameCallback()
-            } catch (e: Exception) {
-                Log.e(logTag, "Error unregistering Knox callback", e)
-            }
-        }
-        
-        fun unbind() {
-            if (isServiceBound) {
-                try {
-                    unbindService(serviceConnection)
-                } catch (e: Exception) {
-                    Log.e(logTag, "Error unbinding Knox service", e)
-                }
-                isServiceBound = false
-                captureService = null
-            }
-        }
-
-        fun getCaptureService(): ICaptureService? = captureService
-    }
-
-    private fun updateScreenInfoForKnox(width: Int, height: Int) {
-        SCREEN_INFO.width = width
-        SCREEN_INFO.height = height
-        if (SCREEN_INFO.dpi == 0) {
-            SCREEN_INFO.dpi = 240
-        }
     }
 }
