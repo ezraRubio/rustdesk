@@ -4,16 +4,16 @@ overview: Move all Knox/screentool flow into a dedicated file (KnoxCapturer + he
 todos:
   - id: phase1-refactor
     content: "Phase 1: In-code refactor – KnoxCapturer.kt + minimal MainService hooks"
-    status: in_progress
+    status: completed
   - id: phase1-test
     content: Test after Phase 1 – verify MediaProjection and Knox flows work in-app
-    status: pending
+    status: completed
   - id: phase2-library
     content: "Phase 2: Extract Knox into a separate Android library module (AAR/source)"
-    status: pending
+    status: completed
   - id: phase2-test
     content: Test after Phase 2 – verify app works with library dependency only
-    status: pending
+    status: completed
 isProject: false
 ---
 

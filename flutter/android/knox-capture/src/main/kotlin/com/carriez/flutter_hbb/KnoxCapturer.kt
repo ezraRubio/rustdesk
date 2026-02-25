@@ -8,17 +8,19 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.SharedMemory
 import android.util.Log
-import ffi.FFI
-import hbb.KeyEventConverter
-import hbb.MessageOuterClass.KeyEvent as ProtoKeyEvent
 import il.co.tmg.screentool.ICaptureService
 import il.co.tmg.screentool.IFrameCallback
 import java.nio.ByteBuffer
 
 const val KNOX_PACKAGE = "il.co.tmg.screentool"
 const val KNOX_SERVICE = "il.co.tmg.screentool.service.CaptureService"
-private const val KNOX_BIND_TIMEOUT_MS = 15000L
 private const val LOG_TAG_KNOX = "LOG_SERVICE"
+
+interface KnoxCaptureCallbacks {
+    fun onFrame(buffer: ByteBuffer)
+    fun isCapturing(): Boolean
+    fun onScreenInfo(width: Int, height: Int)
+}
 
 fun isKnoxAvailable(context: Context): Boolean {
     val intent = Intent().apply {
@@ -31,7 +33,7 @@ fun isKnoxAvailable(context: Context): Boolean {
 class KnoxCapturer(
     private val context: Context,
     private val serviceHandler: Handler,
-    private val isCapturing: () -> Boolean
+    private val callbacks: KnoxCaptureCallbacks
 ) {
     private var captureService: ICaptureService? = null
     private var isServiceBound = false
@@ -68,7 +70,7 @@ class KnoxCapturer(
 
     private val knoxFrameCallback = object : IFrameCallback.Stub() {
         override fun onFrameAvailable(memory: SharedMemory) {
-            if (!isCapturing()) {
+            if (!callbacks.isCapturing()) {
                 Log.d(LOG_TAG_KNOX, "Frame available but not capturing, ignoring")
                 return
             }
@@ -82,7 +84,7 @@ class KnoxCapturer(
                 }
                 if (buf == null) return@onFrameAvailable
                 buf.rewind()
-                FFI.onVideoFrameUpdate(buf)
+                callbacks.onFrame(buf)
             } catch (e: Exception) {
                 Log.e(LOG_TAG_KNOX, "Error processing Knox frame", e)
             }
@@ -139,7 +141,7 @@ class KnoxCapturer(
                 Log.e(LOG_TAG_KNOX, "Invalid Knox screen dimensions: ${knoxWidth}x${knoxHeight}")
                 return false
             }
-            updateScreenInfoForKnox(knoxWidth, knoxHeight)
+            callbacks.onScreenInfo(knoxWidth, knoxHeight)
             return true
         } catch (e: Exception) {
             Log.e(LOG_TAG_KNOX, "Failed to initialize Knox capture", e)
@@ -176,14 +178,8 @@ class KnoxCapturer(
         }
     }
 
-    fun injectKeyEvent(input: ByteArray): Boolean {
+    fun injectKeyEvent(keyCode: Int, modifiers: Int, sendDown: Boolean, sendUp: Boolean): Boolean {
         return try {
-            val proto = ProtoKeyEvent.parseFrom(input)
-            val androidEv = KeyEventConverter.toAndroidKeyEvent(proto)
-            val keyCode = androidEv.keyCode
-            val modifiers = androidEv.metaState
-            val sendDown = proto.down || proto.press
-            val sendUp = !proto.down || proto.press
             Log.d(LOG_TAG_KNOX, "Knox injectKeyEvent: keyCode=$keyCode, modifiers=$modifiers, sendDown=$sendDown, sendUp=$sendUp")
             captureService?.injectKeyEvent(keyCode, modifiers, sendDown, sendUp)
             true
@@ -204,12 +200,5 @@ class KnoxCapturer(
             captureService = null
         }
     }
-
-    private fun updateScreenInfoForKnox(width: Int, height: Int) {
-        SCREEN_INFO.width = width
-        SCREEN_INFO.height = height
-        if (SCREEN_INFO.dpi == 0) {
-            SCREEN_INFO.dpi = 240
-        }
-    }
 }
+

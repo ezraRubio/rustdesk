@@ -6,3 +6,4 @@ interface IFrameCallback {
     void onFrameAvailable(in SharedMemory sharedMemory);
     void onCaptureError(String error);
 }
+

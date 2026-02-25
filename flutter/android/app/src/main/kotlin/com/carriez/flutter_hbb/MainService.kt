@@ -96,7 +96,7 @@ class MainService : Service() {
     @RequiresApi(Build.VERSION_CODES.N)
     fun rustKeyEventInput(input: ByteArray) {
         if (isUsingKnox) {
-            knoxCapturer?.injectKeyEvent(input)
+            AppKnoxIntegration.handleKnoxKeyEvent(input, knoxCapturer, logTag)
         } else {
             InputService.ctx?.onKeyEvent(input)
         }
@@ -275,7 +275,7 @@ class MainService : Service() {
             return
         }
 
-        knoxCapturer = KnoxCapturer(this, serviceHandler!!, { isStart })
+        knoxCapturer = AppKnoxIntegration.createKnoxCapturer(this, serviceHandler!!)
 
         if (knoxCapturer!!.bind()) {
             synchronized(this) {
