@@ -1,0 +1,25 @@
+{
+  "name": "web_hbb",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "cmd /c \"python gen_js_from_hbb.py > src\\gen_js_from_hbb.ts && python ts_proto.py && tsc && vite build --emptyOutDir\"",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@types/node": "^16.11.7",
+    "typescript": "^4.4.4",
+    "vite": "^2.7.2"
+  },
+  "dependencies": {
+    "fast-sha256": "^1.3.0",
+    "libsodium": "^0.7.9",
+    "libsodium-wrappers-sumo": "^0.7.13",
+    "ogv": "1.8.6",
+    "pcm-player": "^0.0.11",
+    "ts-proto": "^1.101.0",
+    "wasm-feature-detect": "^1.2.11",
+    "yuv-canvas": "1.2.6",
+    "zstddec": "^0.0.2"
+  }
+}

@@ -1,6 +1,6 @@
-package il.co.tmg.screentool;
+package il.co.tmg.fort_ct;
 
-import il.co.tmg.screentool.IFrameCallback;
+import il.co.tmg.fort_ct.IFrameCallback;
 
 interface ICaptureService {
     void initCapture();

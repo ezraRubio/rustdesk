@@ -21,10 +21,13 @@ private const val KNOX_BIND_TIMEOUT_MS = 15000L
 private const val LOG_TAG_KNOX = "LOG_SERVICE"
 
 fun isKnoxAvailable(context: Context): Boolean {
+    Log.d(LOG_TAG_KNOX, "is know available? ")
     val intent = Intent().apply {
         setClassName(KNOX_PACKAGE, KNOX_SERVICE)
     }
+    Log.d(LOG_TAG_KNOX, "what intent? ${intent}")
     val resolveInfo = context.packageManager.resolveService(intent, 0)
+    Log.d(LOG_TAG_KNOX, " and did it resolved? ${resolveInfo}")
     return resolveInfo != null
 }
 

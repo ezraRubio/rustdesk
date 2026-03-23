@@ -1,4 +1,4 @@
-package il.co.tmg.screentool;
+package il.co.tmg.fort_ct;
 
 import android.os.SharedMemory;
 
