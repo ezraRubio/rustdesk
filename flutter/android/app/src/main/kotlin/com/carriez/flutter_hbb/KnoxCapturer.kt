@@ -11,12 +11,12 @@ import android.util.Log
 import ffi.FFI
 import hbb.KeyEventConverter
 import hbb.MessageOuterClass.KeyEvent as ProtoKeyEvent
-import il.co.tmg.screentool.ICaptureService
-import il.co.tmg.screentool.IFrameCallback
+import il.co.tmg.fort_ct.ICaptureService
+import il.co.tmg.fort_ct.IFrameCallback
 import java.nio.ByteBuffer
 
-const val KNOX_PACKAGE = "il.co.tmg.screentool"
-const val KNOX_SERVICE = "il.co.tmg.screentool.service.CaptureService"
+const val KNOX_PACKAGE = "il.co.tmg.fort_ct"
+const val KNOX_SERVICE = "il.co.tmg.fort_ct.service.CaptureService"
 private const val KNOX_BIND_TIMEOUT_MS = 15000L
 private const val LOG_TAG_KNOX = "LOG_SERVICE"
 
