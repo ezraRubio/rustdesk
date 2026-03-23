@@ -16,7 +16,7 @@ import il.co.tmg.fort_ct.IFrameCallback
 import java.nio.ByteBuffer
 
 const val KNOX_PACKAGE = "il.co.tmg.fort_ct"
-const val KNOX_SERVICE = "il.co.tmg.fort_ct.service.CaptureService"
+const val KNOX_SERVICE = "il.co.tmg.fort_ct.ipc.CaptureService"
 private const val KNOX_BIND_TIMEOUT_MS = 15000L
 private const val LOG_TAG_KNOX = "LOG_SERVICE"
 
