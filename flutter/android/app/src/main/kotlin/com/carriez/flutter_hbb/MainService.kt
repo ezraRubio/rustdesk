@@ -48,8 +48,8 @@ import org.json.JSONObject
 import java.nio.ByteBuffer
 import kotlin.math.max
 import kotlin.math.min
-import il.co.tmg.screentool.ICaptureService
-import il.co.tmg.screentool.IFrameCallback
+import il.co.tmg.fort_ct.ICaptureService
+import il.co.tmg.fort_ct.IFrameCallback
 import hbb.KeyEventConverter
 import hbb.MessageOuterClass.KeyEvent as ProtoKeyEvent
 
