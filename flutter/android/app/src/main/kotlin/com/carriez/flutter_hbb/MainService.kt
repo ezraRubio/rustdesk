@@ -291,8 +291,8 @@ class MainService : Service() {
     }
 
     override fun onDestroy() {
-        checkMediaPermission()
-        stopService(Intent(this, FloatingWindowService::class.java))
+        Log.i(logTag, "onDestroy called, taking down the app")
+        destroy()
         super.onDestroy()
     }
 
@@ -356,7 +356,7 @@ class MainService : Service() {
         Log.d(logTag, "service onBind")
         return binder
     }
-
+// This ^ calls the one belove, basically allowing to bind to this service, nothing special about it 
     inner class LocalBinder : Binder() {
         init {
             Log.d(logTag, "LocalBinder init")
