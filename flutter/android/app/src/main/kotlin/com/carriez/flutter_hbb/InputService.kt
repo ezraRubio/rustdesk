@@ -383,7 +383,7 @@ class InputService : AccessibilityService() {
     }
 
     @RequiresApi(Build.VERSION_CODES.N)
-    fun onKeyEvent(data: ByteArray, isKnox?: Boolean) {
+    fun onKeyEvent(data: ByteArray, isKnox: Boolean?, knoxCapturer: KnoxCapturer?) {
         val keyEvent = KeyEvent.parseFrom(data)
         val keyboardMode = keyEvent.getMode()
 
@@ -423,9 +423,9 @@ class InputService : AccessibilityService() {
           logger.info("knox availaible, injecting key event")
           ke?.let { event ->
             knoxCapturer?.injectKeyEvent(event)
-              if (keyEvent.getPress()) {
-                  val actionUpEvent = KeyEventAndroid(KeyEventAndroid.ACTION_UP, event.keyCode)
-                  knoxCapturer?.injectKeyEvent(actionUpEvent)
+            if (keyEvent.getPress()) {
+                val actionUpEvent = KeyEventAndroid(KeyEventAndroid.ACTION_UP, event.keyCode)
+                knoxCapturer?.injectKeyEvent(actionUpEvent)
             }
           }
         } else if (Build.VERSION.SDK_INT >= 33) {

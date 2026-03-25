@@ -98,7 +98,7 @@ class MainService : Service() {
         // if (isUsingKnox) {
         //     knoxCapturer?.injectKeyEvent(input)
         // } else {
-            InputService.ctx?.onKeyEvent(input, isUsingKnox)
+            InputService.ctx?.onKeyEvent(input, isUsingKnox, knoxCapturer)
         // }
     }
 
