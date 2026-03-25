@@ -8,6 +8,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.SharedMemory
 import android.util.Log
+import android.view.KeyEvent as KeyEventAndroid
 import ffi.FFI
 import hbb.KeyEventConverter
 import hbb.MessageOuterClass.KeyEvent as ProtoKeyEvent
@@ -179,16 +180,17 @@ class KnoxCapturer(
         }
     }
 
-    fun injectKeyEvent(input: ByteArray): Boolean {
+    fun injectKeyEvent(event: KeyEventAndroid): Boolean {
         return try {
-            val proto = ProtoKeyEvent.parseFrom(input)
-            val androidEv = KeyEventConverter.toAndroidKeyEvent(proto)
-            val keyCode = androidEv.keyCode
-            val modifiers = androidEv.metaState
-            val sendDown = proto.down || proto.press
-            val sendUp = !proto.down || proto.press
-            Log.d(LOG_TAG_KNOX, "Knox injectKeyEvent: keyCode=$keyCode, modifiers=$modifiers, sendDown=$sendDown, sendUp=$sendUp")
-            captureService?.injectKeyEvent(keyCode, modifiers, sendDown, sendUp)
+            // val proto = ProtoKeyEvent.parseFrom(input)
+            // val androidEv = KeyEventConverter.toAndroidKeyEvent(proto)
+            // val keyCode = androidEv.keyCode
+            // val modifiers = androidEv.metaState
+            // val sendDown = proto.down || proto.press
+            // val sendUp = !proto.down || proto.press
+            // Log.d(LOG_TAG_KNOX, "Knox injectKeyEvent: keyCode=$keyCode, modifiers=$modifiers, sendDown=$sendDown, sendUp=$sendUp")
+            // captureService?.injectKeyEvent(keyCode, modifiers, sendDown, sendUp)
+            captureService?.injectKeyEvent(event)
             true
         } catch (e: Exception) {
             Log.d(LOG_TAG_KNOX, "Knox injectKeyEvent failed: ${e.message}")

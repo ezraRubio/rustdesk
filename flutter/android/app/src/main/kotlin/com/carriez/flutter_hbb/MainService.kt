@@ -95,11 +95,11 @@ class MainService : Service() {
     @Keep
     @RequiresApi(Build.VERSION_CODES.N)
     fun rustKeyEventInput(input: ByteArray) {
-        if (isUsingKnox) {
-            knoxCapturer?.injectKeyEvent(input)
-        } else {
-            InputService.ctx?.onKeyEvent(input)
-        }
+        // if (isUsingKnox) {
+        //     knoxCapturer?.injectKeyEvent(input)
+        // } else {
+            InputService.ctx?.onKeyEvent(input, isUsingKnox)
+        // }
     }
 
     @Keep
