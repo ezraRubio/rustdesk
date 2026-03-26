@@ -576,6 +576,7 @@ class MainService : Service() {
     }
 
     fun checkMediaPermission(): Boolean {
+        Log.d(logTag, "checking media permissions, is using knox? $isUsingKnox, is input service open? ${InputService.isOpen}, is this or that to string? ${(isUsingKnox || InputService.isOpen)}.. and is this ready? $isReady")
         Handler(Looper.getMainLooper()).post {
             MainActivity.flutterMethodChannel?.invokeMethod(
                 "on_state_changed",
