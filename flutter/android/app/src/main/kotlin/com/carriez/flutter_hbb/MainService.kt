@@ -244,6 +244,9 @@ class MainService : Service() {
     fun isKnoxBindingInProgress(): Boolean {
         return knoxCapturer != null && !_isReady
     }
+    fun getIsUsingKnox() {
+        return isUsingKnox
+    }
 
     override fun onCreate() {
         super.onCreate()
