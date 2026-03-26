@@ -504,10 +504,6 @@ class MainService : Service() {
             _isStart = true
             FFI.setFrameRawEnable("video", true)
             MainActivity.rdClipboardManager?.setCaptureStarted(_isStart)
-            MainActivity.flutterMethodChannel?.invokeMethod(
-              "on_state_changed",
-              mapOf("name" to "input", "value" to "true")
-            )
             return true
         }
         
@@ -525,10 +521,6 @@ class MainService : Service() {
         
         if (isUsingKnox) {
             knoxCapturer?.releaseCapture()
-            MainActivity.flutterMethodChannel?.invokeMethod(
-              "on_state_changed",
-              mapOf("name" to "input", "value" to "false")
-            )
         } else {
             if (reuseVirtualDisplay) {
                 // The virtual display video projection can be paused by calling `setSurface(null)`.
@@ -593,7 +585,7 @@ class MainService : Service() {
         Handler(Looper.getMainLooper()).post {
             MainActivity.flutterMethodChannel?.invokeMethod(
                 "on_state_changed",
-                mapOf("name" to "input", "value" to InputService.isOpen.toString())
+                mapOf("name" to "input", "value" to (isUsingKnox || InputService.isOpen).toString())
             )
         }
         return isReady
