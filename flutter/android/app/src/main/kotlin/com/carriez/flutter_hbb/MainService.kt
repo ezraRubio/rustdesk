@@ -496,8 +496,6 @@ class MainService : Service() {
         if (isStart) {
             return true
         }
-        Log.d(logTag, "Start Capture")
-        
         if (isUsingKnox && knoxCapturer != null) {
             if (!knoxCapturer!!.initCapture()) {
                 Log.w(logTag, "Knox auto-start: Failed to initialize capture")
@@ -506,6 +504,10 @@ class MainService : Service() {
             _isStart = true
             FFI.setFrameRawEnable("video", true)
             MainActivity.rdClipboardManager?.setCaptureStarted(_isStart)
+            MainActivity.flutterMethodChannel?.invokeMethod(
+              "on_state_changed",
+              mapOf("name" to "input", "value" to "true")
+            )
             return true
         }
         
@@ -523,6 +525,10 @@ class MainService : Service() {
         
         if (isUsingKnox) {
             knoxCapturer?.releaseCapture()
+            MainActivity.flutterMethodChannel?.invokeMethod(
+              "on_state_changed",
+              mapOf("name" to "input", "value" to "false")
+            )
         } else {
             if (reuseVirtualDisplay) {
                 // The virtual display video projection can be paused by calling `setSurface(null)`.
