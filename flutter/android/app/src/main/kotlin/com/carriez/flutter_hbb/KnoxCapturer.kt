@@ -180,7 +180,23 @@ class KnoxCapturer(
         }
     }
 
-    fun injectKeyEvent(event: KeyEventAndroid): Boolean {
+    fun injectKeyEvent(data: ByteArray): Boolean {
+        val keyEvent = ProtoKeyEvent.parseFrom(data)
+        val keyboardMode = ProtoKeyEvent.getMode()
+
+        var textToCommit: String? = null
+        if (keyEvent.hasChr() && (keyEvent.getDown() || keyEvent.getPress())) {
+            val chr = keyEvent.getChr()
+            if (chr != null) {
+                textToCommit = String(Character.toChars(chr))
+            }
+        }
+
+        Log.d(LOG_TAG_KNOX, "onKeyEvent $keyEvent textToCommit:$textToCommit")
+
+        var ke: KeyEventAndroid? = null
+        ke = KeyEventConverter.toAndroidKeyEvent(keyEvent)
+        Log.d(LOG_TAG_KNOX, "key event android style $ke")
         return try {
             // val proto = ProtoKeyEvent.parseFrom(input)
             // val androidEv = KeyEventConverter.toAndroidKeyEvent(proto)
@@ -190,7 +206,13 @@ class KnoxCapturer(
             // val sendUp = !proto.down || proto.press
             // Log.d(LOG_TAG_KNOX, "Knox injectKeyEvent: keyCode=$keyCode, modifiers=$modifiers, sendDown=$sendDown, sendUp=$sendUp")
             // captureService?.injectKeyEvent(keyCode, modifiers, sendDown, sendUp)
-            captureService?.injectKeyEvent(event)
+            ke?.let { event ->
+                captureService?.injectKeyEvent(event)
+                if (keyEvent.getPress()) {
+                    val actionUpEvent = KeyEventAndroid(KeyEventAndroid.ACTION_UP, event.keyCode)
+                    inputConnection.sendKeyEvent(actionUpEvent)
+                }
+            }
             true
         } catch (e: Exception) {
             Log.d(LOG_TAG_KNOX, "Knox injectKeyEvent failed: ${e.message}")
