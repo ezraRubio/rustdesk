@@ -182,7 +182,6 @@ class KnoxCapturer(
 
     fun injectKeyEvent(data: ByteArray): Boolean {
         val keyEvent = ProtoKeyEvent.parseFrom(data)
-        val keyboardMode = ProtoKeyEvent.getMode()
 
         var textToCommit: String? = null
         if (keyEvent.hasChr() && (keyEvent.getDown() || keyEvent.getPress())) {
@@ -211,6 +210,7 @@ class KnoxCapturer(
                 if (keyEvent.getPress()) {
                     val actionUpEvent = KeyEventAndroid(KeyEventAndroid.ACTION_UP, event.keyCode)
                     inputConnection.sendKeyEvent(actionUpEvent)
+                    captureService?.injectKeyEvent(event)
                 }
             }
             true
