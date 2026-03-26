@@ -3,13 +3,16 @@ import android.view.KeyEvent
 import android.view.KeyCharacterMap
 import hbb.MessageOuterClass.KeyboardMode
 import hbb.MessageOuterClass.ControlKey
+import android.util.Log
 
 object KeyEventConverter {
     fun toAndroidKeyEvent(keyEventProto: hbb.MessageOuterClass.KeyEvent): KeyEvent {
+        Log.d("KeyEventConverter", "keyEventProto $keyEventProto")
         var chrValue = 0
         var modifiers = 0
 
         val keyboardMode = keyEventProto.getMode()
+        Log.d("KeyEventConverter", "keyboard mode $keyboardMode")
 
         if (keyEventProto.hasChr()) {
             if (keyboardMode == KeyboardMode.Map || keyboardMode == KeyboardMode.Translate) {
@@ -20,8 +23,10 @@ object KeyEventConverter {
         } else if (keyEventProto.hasControlKey()) {
             chrValue = convertControlKeyToKeyCode(keyEventProto.getControlKey())
         }
+        Log.d("KeyEventConverter", " chrValue $chrValue")
 
         var modifiersList = keyEventProto.getModifiersList()
+        Log.d("KeyEventConverter", " modifiersList $modifiersList")
 
         if (modifiersList != null) {
             for (modifier in keyEventProto.getModifiersList()) {
@@ -29,6 +34,7 @@ object KeyEventConverter {
                 modifiers = modifiers or modifierValue
             }
         }
+        Log.d("KeyEventConverter", " modifiers $modifiers")
 
         var action = 0
         if (keyEventProto.getDown() || keyEventProto.getPress()) {
@@ -36,6 +42,7 @@ object KeyEventConverter {
         } else {
             action = KeyEvent.ACTION_UP
         }
+        Log.d("KeyEventConverter", " action $action")
 
         return KeyEvent(0, 0, action, chrValue, 0, modifiers)
     }

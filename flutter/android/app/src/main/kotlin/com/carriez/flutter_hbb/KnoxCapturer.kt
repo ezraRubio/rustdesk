@@ -182,17 +182,17 @@ class KnoxCapturer(
 
     fun injectKeyEvent(data: ByteArray): Boolean {
         val keyEvent = ProtoKeyEvent.parseFrom(data)
-
-        var textToCommit: String? = null
-        if (keyEvent.hasChr() && (keyEvent.getDown() || keyEvent.getPress())) {
-            val chr = keyEvent.getChr()
-            if (chr != null) {
-                textToCommit = String(Character.toChars(chr))
-            }
-        }
-
-        Log.d(LOG_TAG_KNOX, "onKeyEvent $keyEvent textToCommit:$textToCommit")
-
+        //
+        // var textToCommit: String? = null
+        // if (keyEvent.hasChr() && (keyEvent.getDown() || keyEvent.getPress())) {
+        //     val chr = keyEvent.getChr()
+        //     if (chr != null) {
+        //         textToCommit = String(Character.toChars(chr))
+        //     }
+        // }
+        //
+        // Log.d(LOG_TAG_KNOX, "onKeyEvent $keyEvent textToCommit:$textToCommit")
+        //
         var ke: KeyEventAndroid? = null
         ke = KeyEventConverter.toAndroidKeyEvent(keyEvent)
         Log.d(LOG_TAG_KNOX, "key event android style $ke")
@@ -209,7 +209,6 @@ class KnoxCapturer(
                 captureService?.injectKeyEvent(event)
                 if (keyEvent.getPress()) {
                     val actionUpEvent = KeyEventAndroid(KeyEventAndroid.ACTION_UP, event.keyCode)
-                    inputConnection.sendKeyEvent(actionUpEvent)
                     captureService?.injectKeyEvent(event)
                 }
             }
