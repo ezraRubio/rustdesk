@@ -18,7 +18,7 @@ object KeyEventConverter {
             } else {
                 //chrValue = convertUnicodeToKeyCode(keyEventProto.getChr() as Int)
                 val unicode = keyEventProto.getChr() as Int
-                return convertUnicodeToKeyCode(unicode)
+                return convertUnicodeToKeyEventsOnLegacy(unicode)
             }
         } else if (keyEventProto.hasControlKey()) {
             chrValue = convertControlKeyToKeyCode(keyEventProto.getControlKey())
