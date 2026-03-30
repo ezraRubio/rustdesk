@@ -244,7 +244,7 @@ class MainService : Service() {
     fun isKnoxBindingInProgress(): Boolean {
         return knoxCapturer != null && !_isReady
     }
-    fun getIsUsingKnox() {
+    fun getIsUsingKnox(): Boolean {
         return isUsingKnox
     }
 

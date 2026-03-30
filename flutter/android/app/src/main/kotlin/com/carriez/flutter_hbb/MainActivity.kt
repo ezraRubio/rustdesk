@@ -73,7 +73,7 @@ class MainActivity : FlutterActivity() {
 
     override fun onResume() {
         super.onResume()
-        val inputPer = (mainService?.getIsUsingKnox() || InputService.isOpen)
+        val inputPer = (mainService?.getIsUsingKnox() == true) || InputService.isOpen
         activity.runOnUiThread {
             flutterMethodChannel?.invokeMethod(
                 "on_state_changed",
@@ -197,7 +197,7 @@ class MainActivity : FlutterActivity() {
                 "check_service" -> {
                     Companion.flutterMethodChannel?.invokeMethod(
                         "on_state_changed",
-                        mapOf("name" to "input", "value" to (mainService?.getIsUsingKnox() || InputService.isOpen).toString())
+                        mapOf("name" to "input", "value" to ((mainService?.getIsUsingKnox() == true) || InputService.isOpen).toString())
                     )
                     Companion.flutterMethodChannel?.invokeMethod(
                         "on_state_changed",

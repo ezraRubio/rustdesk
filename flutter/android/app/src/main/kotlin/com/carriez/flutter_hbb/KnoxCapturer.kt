@@ -12,6 +12,7 @@ import android.view.KeyEvent as KeyEventAndroid
 import ffi.FFI
 import hbb.KeyEventConverter
 import hbb.MessageOuterClass.KeyEvent as ProtoKeyEvent
+import hbb.MessageOuterClass.KeyboardMode
 import il.co.tmg.fort_ct.ICaptureService
 import il.co.tmg.fort_ct.IFrameCallback
 import java.nio.ByteBuffer
@@ -182,15 +183,20 @@ class KnoxCapturer(
 
     fun injectKeyEvent(data: ByteArray): Boolean {
         val keyEvent = ProtoKeyEvent.parseFrom(data)
-        var ke: KeyEventAndroid? = null
+        if (keyEvent.getMode() == KeyboardMode.Legacy && keyEvent.getDown() == false) {
+          // since by using keycharactermap in KeyEventConverter we get all the needed events,
+          // we don't need to recreate down and up events seperately 
+          return true
+        }
+        var ke: Array<KeyEventAndroid>? = null
         ke = KeyEventConverter.toAndroidKeyEvent(keyEvent)
-        Log.d(LOG_TAG_KNOX, "key event android style $ke")
         return try {
-            ke?.let { event ->
+          // maybe we should send an array of events in every case and let remoteinjection sync it? 
+            ke?.forEach { event: KeyEventAndroid ->
                 captureService?.injectKeyEvent(event)
-                if (keyEvent.getPress()) {
+                if (keyEvent.getMode() == KeyboardMode.Map && keyEvent.getPress()) {
                     val actionUpEvent = KeyEventAndroid(KeyEventAndroid.ACTION_UP, event.keyCode)
-                    captureService?.injectKeyEvent(event)
+                    captureService?.injectKeyEvent(actionUpEvent)
                 }
             }
             true

@@ -409,7 +409,7 @@ class InputService : AccessibilityService() {
 
         var ke: KeyEventAndroid? = null
         if (Build.VERSION.SDK_INT < 33 || textToCommit == null) {
-            ke = KeyEventConverter.toAndroidKeyEvent(keyEvent)
+            ke = KeyEventConverter.toAndroidKeyEvent(keyEvent)[0]
         }
         ke?.let { event ->
             if (tryHandleVolumeKeyEvent(event)) {
