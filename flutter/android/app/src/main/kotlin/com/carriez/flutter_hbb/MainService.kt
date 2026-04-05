@@ -37,6 +37,7 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import il.co.tmg.fort_rc.activities.DispatcherActivity
 import io.flutter.embedding.android.FlutterActivity
 import java.util.concurrent.Executors
 import kotlin.concurrent.thread
@@ -213,6 +214,13 @@ class MainService : Service() {
             get() = _isStart
         val isAudioStart: Boolean
             get() = _isAudioStart
+
+        /**
+         * Reference to the active DispatcherActivity that holds the CaptureControlService binding.
+         * Used by MainService.destroy() to signal session teardown.
+         * Set/cleared by DispatcherActivity lifecycle.
+         */
+        var activeDispatcher: DispatcherActivity? = null
     }
 
     private val logTag = "LOG_SERVICE"
@@ -241,11 +249,44 @@ class MainService : Service() {
     private lateinit var notificationChannel: String
     private lateinit var notificationBuilder: NotificationCompat.Builder
 
-    fun isKnoxBindingInProgress(): Boolean {
-        return knoxCapturer != null && !_isReady
-    }
     fun getIsUsingKnox(): Boolean {
         return isUsingKnox
+    }
+
+    /**
+     * Expose the service handler so DispatcherActivity can post work on it.
+     */
+    fun getServiceHandler(): Handler? = serviceHandler
+
+    /**
+     * Called by DispatcherActivity after it has successfully negotiated a session with
+     * CaptureControlService and bound + initialized CaptureService.
+     * The KnoxCapturer is ready for use — Rust can trigger startCapture() at any time.
+     */
+    fun onKnoxSessionReady(capturer: KnoxCapturer) {
+        Log.i(logTag, "onKnoxSessionReady: Knox session handed off from DispatcherActivity")
+        synchronized(this) {
+            knoxCapturer = capturer
+            isUsingKnox = true
+            _isReady = true
+        }
+        checkMediaPermission()
+    }
+
+    /**
+     * Called when the Fort CT session has ended (DispatcherActivity finishing,
+     * CaptureControlService disconnected, etc.). Resets Knox state so the app
+     * can fall back to MediaProjection or wait for a new session.
+     */
+    fun onKnoxSessionEnded() {
+        Log.i(logTag, "onKnoxSessionEnded: Knox session ended, resetting state")
+        synchronized(this) {
+            knoxCapturer = null
+            isUsingKnox = false
+            _isReady = false
+        }
+        stopCapture()
+        checkMediaPermission()
     }
 
     override fun onCreate() {
@@ -265,32 +306,10 @@ class MainService : Service() {
         FFI.startServer(configPath, "")
 
         createForegroundNotification()
-        
-        serviceHandler?.post{ tryAutoStartKnoxCapture() }
-        
-    }
-    
-    private fun tryAutoStartKnoxCapture() {
-        Log.d(logTag, "Attempting auto-start with Knox")
 
-        if (!isKnoxAvailable(this)) {
-            Log.i(logTag, "Knox service not available, waiting for manual start")
-            return
-        }
-
-        knoxCapturer = KnoxCapturer(this, serviceHandler!!, { isStart })
-
-        if (knoxCapturer!!.bind()) {
-            synchronized(this) {
-                isUsingKnox = true
-                _isReady = true
-            }
-            Log.i(logTag, "Knox auto-start: Bind successful, service ready")
-            checkMediaPermission()
-        } else {
-            Log.w(logTag, "Knox auto-start: Failed to bind service")
-            knoxCapturer = null
-        }
+        // Knox/Fort CT capture is now initiated by DispatcherActivity, not auto-started here.
+        // DispatcherActivity negotiates the session with CaptureControlService and then
+        // calls onKnoxSessionReady() to hand off the KnoxCapturer.
     }
 
     override fun onDestroy() {
@@ -371,7 +390,6 @@ class MainService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
         if (intent?.action == ACT_INIT_MEDIA_PROJECTION_AND_SERVICE) {
-            // Post to serviceHandler so this runs after tryAutoStartKnoxCapture() from onCreate().
             val startIntent = intent
             serviceHandler?.post {
                 createForegroundNotification()
@@ -380,32 +398,27 @@ class MainService : Service() {
                     FFI.startService()
                 }
 
+                // If Knox session is already active (driven by DispatcherActivity), skip
+                // MediaProjection since CaptureService is providing capture.
                 synchronized(this@MainService) {
                     if (isUsingKnox && _isReady) {
+                        Log.i(logTag, "Knox session already active via DispatcherActivity, skipping MediaProjection")
                         return@post
                     }
                 }
 
-                if (knoxCapturer != null && !_isReady) {
-                    Log.i(logTag, "Knox is available but binding in progress...")
-                    serviceHandler?.postDelayed({
-                        if (!_isReady) {
-                            val mediaProjectionManager =
-                                getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-                            startIntent.getParcelableExtra<Intent>(EXT_MEDIA_PROJECTION_RES_INTENT)?.let {
-                                mediaProjection =
-                                    mediaProjectionManager.getMediaProjection(Activity.RESULT_OK, it)
-                                checkMediaPermission()
-                                _isReady = true
-                            } ?: let {
-                                Log.d(logTag, "getParcelableExtra intent null, invoke requestMediaProjection")
-                                requestMediaProjection()
-                            }
-                        }
-                    }, 2000)
-                    return@post
+                // No Knox session — proceed with MediaProjection path
+                val mediaProjectionManager =
+                    getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+                startIntent.getParcelableExtra<Intent>(EXT_MEDIA_PROJECTION_RES_INTENT)?.let {
+                    mediaProjection =
+                        mediaProjectionManager.getMediaProjection(Activity.RESULT_OK, it)
+                    checkMediaPermission()
+                    _isReady = true
+                } ?: let {
+                    Log.d(logTag, "getParcelableExtra intent null, invoke requestMediaProjection")
+                    requestMediaProjection()
                 }
-                requestMediaProjection()
             }
         }
         return START_NOT_STICKY // don't use sticky (auto restart), the new service (from auto restart) will lose control
@@ -500,10 +513,10 @@ class MainService : Service() {
             return true
         }
         if (isUsingKnox && knoxCapturer != null) {
-            if (!knoxCapturer!!.initCapture()) {
-                Log.w(logTag, "Knox auto-start: Failed to initialize capture")
-                return false
-            }
+            // In the DispatcherActivity flow, initCapture() was already called during
+            // session negotiation. The KnoxCapturer is already bound, initialized, and
+            // the frame callback is registered. We just need to enable the video pipeline.
+            Log.i(logTag, "startCapture: Knox session active, enabling video pipeline")
             _isStart = true
             FFI.setFrameRawEnable("video", true)
             MainActivity.rdClipboardManager?.setCaptureStarted(_isStart)
@@ -562,6 +575,14 @@ class MainService : Service() {
         _isAudioStart = false
 
         stopCapture()
+
+        // Signal DispatcherActivity to finish, which unbinds CaptureControlService
+        // and ends the Fort CT session. DispatcherActivity handles its own
+        // CaptureService unbinding in teardownCurrentSession().
+        activeDispatcher?.requestFinish()
+        activeDispatcher = null
+
+        // Clean up Knox state (in case DispatcherActivity didn't handle it)
         knoxCapturer?.unbind()
         knoxCapturer = null
         isUsingKnox = false

@@ -19,20 +19,23 @@ import java.nio.ByteBuffer
 
 const val KNOX_PACKAGE = "il.co.tmg.fort_ct"
 const val KNOX_SERVICE = "il.co.tmg.fort_ct.ipc.CaptureService"
-private const val KNOX_BIND_TIMEOUT_MS = 15000L
 private const val LOG_TAG_KNOX = "LOG_SERVICE"
 
-fun isKnoxAvailable(context: Context): Boolean {
-    Log.d(LOG_TAG_KNOX, "is know available? ")
-    val intent = Intent().apply {
-        setClassName(KNOX_PACKAGE, KNOX_SERVICE)
-    }
-    Log.d(LOG_TAG_KNOX, "what intent? ${intent}")
-    val resolveInfo = context.packageManager.resolveService(intent, 0)
-    Log.d(LOG_TAG_KNOX, " and did it resolved? ${resolveInfo}")
-    return resolveInfo != null
-}
-
+/**
+ * KnoxCapturer wraps the AIDL binding to Fort Control Tower's CaptureService.
+ *
+ * In the current flow, KnoxCapturer is instantiated and driven by DispatcherActivity
+ * after it successfully negotiates a session with CaptureControlService. Once capture
+ * is initialized and the session is running, the KnoxCapturer is handed off to
+ * MainService via onKnoxSessionReady().
+ *
+ * Lifecycle:
+ *   1. DispatcherActivity creates KnoxCapturer
+ *   2. DispatcherActivity calls bind() → initCapture()
+ *   3. On success, KnoxCapturer is passed to MainService.onKnoxSessionReady()
+ *   4. Rust triggers startCapture() → frames flow via FFI.onVideoFrameUpdate()
+ *   5. On session end, releaseCapture() → unbind() are called
+ */
 class KnoxCapturer(
     private val context: Context,
     private val serviceHandler: Handler,

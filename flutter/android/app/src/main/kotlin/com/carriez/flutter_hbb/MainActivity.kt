@@ -133,18 +133,13 @@ class MainActivity : FlutterActivity() {
                     Intent(activity, MainService::class.java).also {
                         bindService(it, serviceConnection, Context.BIND_AUTO_CREATE)
                     }
-                    if (mainService?.isKnoxBindingInProgress() == true) {
-                        var waited = 0
-                        while (waited < 2000 && !MainService.isReady) {
-                            Thread.sleep(100)
-                            waited += 100
-                        }
-                        if (waited >= 2000) {
-                            Log.w(logTag, "Knox auto-start timed out")
-                            result.success(false)
-                            return@setMethodCallHandler
-                        }
-                    } 
+                    // Knox capture is now driven by DispatcherActivity (Fort CT session flow).
+                    // If a Knox session is already active, skip MediaProjection request.
+                    if (MainService.isReady && mainService?.getIsUsingKnox() == true) {
+                        Log.i(logTag, "Knox session already active, skipping MediaProjection")
+                        result.success(true)
+                        return@setMethodCallHandler
+                    }
                     requestMediaProjection()
                     result.success(true)
                 }

@@ -87,6 +87,13 @@
             android:excludeFromRecents="true"
             android:theme="@style/Transparent" />
 
+        <activity
+            android:name="com.carriez.flutter_hbb.DispatcherActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:theme="@style/Transparent" />
+
         <service
             android:name=".MainService"
             android:enabled="true"
