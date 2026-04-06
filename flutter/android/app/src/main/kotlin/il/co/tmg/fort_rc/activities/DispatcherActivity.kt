@@ -60,6 +60,7 @@ class DispatcherActivity : Activity() {
 
     private val replyMessenger = Messenger(
         Handler(Looper.getMainLooper()) { msg ->
+            Log.d(LOG_TAG, "message handler, msg: $msg, what? ${msg.what}, arg1? ${msg.arg1}")
             when (msg.what) {
                 MSG_GET_SESSION_INFO -> handleGetSessionInfoReply(msg)
                 MSG_START_SESSION -> handleStartSessionReply(msg)
@@ -331,7 +332,13 @@ class DispatcherActivity : Activity() {
             return
         }
 
-        generatedRemoteId = UUID.randomUUID().toString()
+        val remoteId = MainService.deviceRemoteId
+        if (remoteId.isNullOrBlank()) {
+            Log.e(LOG_TAG, "startRunningSession: device remote ID not yet available")
+            finish()
+            return
+        }
+        generatedRemoteId = remoteId
         generatedToken = generateSecureToken()
 
         Log.d(LOG_TAG, "Sending MSG_START_SESSION: remoteId=$generatedRemoteId")

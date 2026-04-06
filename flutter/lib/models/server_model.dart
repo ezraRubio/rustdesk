@@ -488,6 +488,11 @@ class ServerModel with ChangeNotifier {
       _serverId.id = id;
       notifyListeners();
     }
+
+    // Push to native side for DispatcherActivity
+    if (Platform.isAndroid && id.isNotEmpty) {
+      parent.target?.invokeMethod("update_device_id", {"id": id});
+    }
   }
 
   changeStatue(String name, bool value) {

@@ -215,11 +215,7 @@ class MainService : Service() {
         val isAudioStart: Boolean
             get() = _isAudioStart
 
-        /**
-         * Reference to the active DispatcherActivity that holds the CaptureControlService binding.
-         * Used by MainService.destroy() to signal session teardown.
-         * Set/cleared by DispatcherActivity lifecycle.
-         */
+        var deviceRemoteId: String? = null
         var activeDispatcher: DispatcherActivity? = null
     }
 
