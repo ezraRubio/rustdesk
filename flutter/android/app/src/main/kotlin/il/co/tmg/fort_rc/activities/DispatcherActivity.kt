@@ -1,4 +1,4 @@
-package il.co.tmg.fort_ct.activities 
+package il.co.tmg.fort_rc.activities 
 
 import android.content.ComponentName
 import android.content.Context
