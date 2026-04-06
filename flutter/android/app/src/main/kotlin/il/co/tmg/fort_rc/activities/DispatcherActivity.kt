@@ -44,6 +44,9 @@ class DispatcherActivity : Activity() {
 
         // Token generation
         private const val TOKEN_BYTE_LENGTH = 32
+
+        private const val MAX_START_SESSION_ATTEMPTS = 10
+        private const val START_SESSION_RETRY_MS = 500L
     }
 
     // ---- Intent extras ----
@@ -57,6 +60,7 @@ class DispatcherActivity : Activity() {
     // ---- CaptureControlService (Messenger IPC) ----
     private var controlMessenger: Messenger? = null
     private var isControlBound = false
+    private var startSessionAttempts = 0
 
     private val replyMessenger = Messenger(
         Handler(Looper.getMainLooper()) { msg ->
@@ -331,16 +335,24 @@ class DispatcherActivity : Activity() {
             finish()
             return
         }
-
         val remoteId = MainService.deviceRemoteId
         if (remoteId.isNullOrBlank()) {
-            Log.e(LOG_TAG, "startRunningSession: device remote ID not yet available")
-            finish()
+            startSessionAttempts++
+            if (startSessionAttempts >= MAX_START_SESSION_ATTEMPTS) {
+                Log.w(LOG_TAG, "Device remote ID not available after $MAX_START_SESSION_ATTEMPTS attempts, falling back to UUID")
+                sendStartSession(messenger, UUID.randomUUID().toString())
+                return
+            }
+            Log.d(LOG_TAG, "Device remote ID not yet available, retrying in ${START_SESSION_RETRY_MS}ms (attempt $startSessionAttempts/$MAX_START_SESSION_ATTEMPTS)")
+            Handler(Looper.getMainLooper()).postDelayed({ startRunningSession() }, START_SESSION_RETRY_MS)
             return
         }
+        sendStartSession(messenger, remoteId)
+    }
+
+    private fun sendStartSession(messenger: Messenger, remoteId: String) {
         generatedRemoteId = remoteId
         generatedToken = generateSecureToken()
-
         Log.d(LOG_TAG, "Sending MSG_START_SESSION: remoteId=$generatedRemoteId")
         val msg = Message.obtain(null, MSG_START_SESSION).apply {
             replyTo = replyMessenger

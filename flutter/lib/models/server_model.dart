@@ -490,7 +490,7 @@ class ServerModel with ChangeNotifier {
     }
 
     // Push to native side for DispatcherActivity
-    if (Platform.isAndroid && id.isNotEmpty) {
+    if (isAndroid && id.isNotEmpty) {
       parent.target?.invokeMethod("update_device_id", {"id": id});
     }
   }
