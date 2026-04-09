@@ -215,7 +215,6 @@ class MainService : Service() {
         val isAudioStart: Boolean
             get() = _isAudioStart
 
-        var deviceRemoteId: String? = null
         var activeDispatcher: DispatcherActivity? = null
     }
 

@@ -335,16 +335,10 @@ class DispatcherActivity : Activity() {
             finish()
             return
         }
-        val remoteId = MainService.deviceRemoteId
-        if (remoteId.isNullOrBlank()) {
-            startSessionAttempts++
-            if (startSessionAttempts >= MAX_START_SESSION_ATTEMPTS) {
-                Log.w(LOG_TAG, "Device remote ID not available after $MAX_START_SESSION_ATTEMPTS attempts, falling back to UUID")
-                sendStartSession(messenger, UUID.randomUUID().toString())
-                return
-            }
-            Log.d(LOG_TAG, "Device remote ID not yet available, retrying in ${START_SESSION_RETRY_MS}ms (attempt $startSessionAttempts/$MAX_START_SESSION_ATTEMPTS)")
-            Handler(Looper.getMainLooper()).postDelayed({ startRunningSession() }, START_SESSION_RETRY_MS)
+        val remoteId = FFI.getMyId()
+        if (remoteId.isBlank()) {
+            Log.w(LOG_TAG, "Device remote ID is blank, falling back to UUID")
+            sendStartSession(messenger, UUID.randomUUID().toString())
             return
         }
         sendStartSession(messenger, remoteId)

@@ -484,14 +484,10 @@ class ServerModel with ChangeNotifier {
 
   fetchID() async {
     final id = await bind.mainGetMyId();
+    debugPrint("[server_model - fetchId] id from rust $id, is android? $isAndroid")
     if (id != _serverId.id) {
       _serverId.id = id;
       notifyListeners();
-    }
-
-    // Push to native side for DispatcherActivity
-    if (isAndroid && id.isNotEmpty) {
-      parent.target?.invokeMethod("update_device_id", {"id": id});
     }
   }
 

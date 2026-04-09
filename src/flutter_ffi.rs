@@ -3056,6 +3056,16 @@ pub mod server_side {
     }
 
     #[no_mangle]
+        pub unsafe extern "system" fn Java_ffi_FFI_getMyId(
+            env: JNIEnv,
+            _class: JClass,
+        ) -> jstring {
+            let mut env = env;
+            let id = Config::get_id();
+            return env.new_string(id).unwrap_or_default().into_raw();
+        }
+
+    #[no_mangle]
     pub unsafe extern "system" fn Java_ffi_FFI_isServiceClipboardEnabled(
         env: JNIEnv,
         _class: JClass,
