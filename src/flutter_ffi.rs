@@ -2977,7 +2977,7 @@ pub fn session_get_common(
 
 #[cfg(target_os = "android")]
 pub mod server_side {
-    use hbb_common::{config, log, temporary_password};
+    use hbb_common::{config, log, password_security};
     use jni::{
         errors::{Error as JniError, Result as JniResult},
         objects::{JClass, JObject, JString},
@@ -3061,7 +3061,7 @@ pub mod server_side {
         _class: JClass,
     ) -> jstring {
         let mut env = env;
-        let id = Config::get_id();
+        let id = config::Config::get_id();
         return env.new_string(id).unwrap_or_default().into_raw();
     }
 
