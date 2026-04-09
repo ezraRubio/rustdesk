@@ -2977,7 +2977,7 @@ pub fn session_get_common(
 
 #[cfg(target_os = "android")]
 pub mod server_side {
-    use hbb_common::{config, log};
+    use hbb_common::{config, log, temporary_password};
     use jni::{
         errors::{Error as JniError, Result as JniResult},
         objects::{JClass, JObject, JString},
@@ -3056,14 +3056,24 @@ pub mod server_side {
     }
 
     #[no_mangle]
-        pub unsafe extern "system" fn Java_ffi_FFI_getMyId(
-            env: JNIEnv,
-            _class: JClass,
-        ) -> jstring {
-            let mut env = env;
-            let id = Config::get_id();
-            return env.new_string(id).unwrap_or_default().into_raw();
-        }
+    pub unsafe extern "system" fn Java_ffi_FFI_getMyId(
+        env: JNIEnv,
+        _class: JClass,
+    ) -> jstring {
+        let mut env = env;
+        let id = Config::get_id();
+        return env.new_string(id).unwrap_or_default().into_raw();
+    }
+
+    #[no_mangle]
+    pub unsafe extern "system" fn Java_ffi_FFI_getTemporaryPassword(
+    env: JNIEnv,
+    _class: JClass,
+    ) -> jstring {
+    let mut env = env;
+    let password = password_security::temporary_password();
+        return env.new_string(password).unwrap_or_default().into_raw();
+    }
 
     #[no_mangle]
     pub unsafe extern "system" fn Java_ffi_FFI_isServiceClipboardEnabled(

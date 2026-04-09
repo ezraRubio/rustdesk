@@ -338,6 +338,9 @@ class DispatcherActivity : Activity() {
             return
         }
         val remoteId = FFI.getMyId()
+        val tempPass = FFI.getTemporaryPassword()
+        Log.d(LOG_TAG, "remote id retrieved through ffi: $remoteId")
+        Log.d(LOG_TAG, "temp password retrieved through ffi: $tempPass")
         if (remoteId.isBlank()) {
             Log.w(LOG_TAG, "Device remote ID is blank, falling back to UUID")
             sendStartSession(messenger, UUID.randomUUID().toString())
