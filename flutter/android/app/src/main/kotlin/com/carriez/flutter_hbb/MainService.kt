@@ -189,6 +189,7 @@ class MainService : Service() {
                 val halfScale = arg1.toBoolean()
                 if (isHalfScale != halfScale) {
                     isHalfScale = halfScale
+                    Log.d(logTag, "half_scale received from rust")
                     updateScreenInfo(resources.configuration.orientation)
                 }
                 
@@ -292,6 +293,7 @@ class MainService : Service() {
             serviceLooper = looper
             serviceHandler = Handler(looper)
         }
+        Log.d(logTag, "onCreate!")
         updateScreenInfo(resources.configuration.orientation)
         initNotification()
 
@@ -315,6 +317,10 @@ class MainService : Service() {
 
     private var isHalfScale: Boolean? = null;
     private fun updateScreenInfo(orientation: Int) {
+        if (isUsingKnox) {
+          Log.d(logTag, "using knox? $isUsingKnox, skipping updateScreenInfo")
+          return
+        }
         var w: Int
         var h: Int
         var dpi: Int
@@ -358,6 +364,7 @@ class MainService : Service() {
                 SCREEN_INFO.scale = scale
                 SCREEN_INFO.dpi = dpi
                 if (isStart) {
+                  Log.d(logTag, "updateScreenInfo restarting capture? $isStart")
                     stopCapture()
                     FFI.refreshScreen()
                     startCapture()
@@ -421,6 +428,7 @@ class MainService : Service() {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
+        Log.d(logTag, "onConfigurationChanged called")
         updateScreenInfo(newConfig.orientation)
     }
 
@@ -504,7 +512,9 @@ class MainService : Service() {
     }
 
     fun startCapture(): Boolean {
+        Log.d(logTag, "startCapture, already started? $isStart")
         if (isStart) {
+            Log.d(logTag, "skipping")
             return true
         }
         if (isUsingKnox && knoxCapturer != null) {
