@@ -73,7 +73,7 @@ class MainActivity : FlutterActivity() {
 
     override fun onResume() {
         super.onResume()
-        val inputPer = (mainService?.getIsUsingKnox() == true) || InputService.isOpen
+        val inputPer = KnoxService.isActive || InputService.isOpen
         activity.runOnUiThread {
             flutterMethodChannel?.invokeMethod(
                 "on_state_changed",
@@ -133,9 +133,8 @@ class MainActivity : FlutterActivity() {
                     Intent(activity, MainService::class.java).also {
                         bindService(it, serviceConnection, Context.BIND_AUTO_CREATE)
                     }
-                    // Knox capture is now driven by DispatcherActivity (Fort CT session flow).
-                    // If a Knox session is already active, skip MediaProjection request.
-                    if (MainService.isReady && mainService?.getIsUsingKnox() == true) {
+                    // Knox session active (KnoxService) — skip MediaProjection
+                    if (KnoxService.isActive) {
                         Log.i(logTag, "Knox session already active, skipping MediaProjection")
                         result.success(true)
                         return@setMethodCallHandler
@@ -192,11 +191,11 @@ class MainActivity : FlutterActivity() {
                 "check_service" -> {
                     Companion.flutterMethodChannel?.invokeMethod(
                         "on_state_changed",
-                        mapOf("name" to "input", "value" to ((mainService?.getIsUsingKnox() == true) || InputService.isOpen).toString())
+                        mapOf("name" to "input", "value" to (KnoxService.isActive || InputService.isOpen).toString())
                     )
                     Companion.flutterMethodChannel?.invokeMethod(
                         "on_state_changed",
-                        mapOf("name" to "media", "value" to MainService.isReady.toString())
+                        mapOf("name" to "media", "value" to (MainService.isReady || KnoxService.isActive).toString())
                     )
                     result.success(true)
                 }

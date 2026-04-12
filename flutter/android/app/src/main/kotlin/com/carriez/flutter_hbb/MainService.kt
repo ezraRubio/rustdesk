@@ -37,7 +37,6 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import il.co.tmg.fort_rc.activities.DispatcherActivity
 import io.flutter.embedding.android.FlutterActivity
 import java.util.concurrent.Executors
 import kotlin.concurrent.thread
@@ -76,8 +75,10 @@ class MainService : Service() {
             Log.d(logTag,"Turn on Screen")
             wakeLock.acquire(5000)
         } else {
-            if (isUsingKnox) {
-                knoxCapturer?.injectPointer(kind, mask, x, y, !isInteractive)
+            // Knox path: route input to KnoxService's capturer (same-process static)
+            val knox = KnoxService.instance?.knoxCapturer
+            if (knox != null) {
+                knox.injectPointer(kind, mask, x, y, !isInteractive)
             } else {
                 when (kind) {
                     0 -> { // touch
@@ -96,8 +97,9 @@ class MainService : Service() {
     @Keep
     @RequiresApi(Build.VERSION_CODES.N)
     fun rustKeyEventInput(input: ByteArray) {
-        if (isUsingKnox) {
-            knoxCapturer?.injectKeyEvent(input)
+        val knox = KnoxService.instance?.knoxCapturer
+        if (knox != null) {
+            knox.injectKeyEvent(input)
         } else {
             InputService.ctx?.onKeyEvent(input)
         }
@@ -215,8 +217,6 @@ class MainService : Service() {
             get() = _isStart
         val isAudioStart: Boolean
             get() = _isAudioStart
-
-        var activeDispatcher: DispatcherActivity? = null
     }
 
     private val logTag = "LOG_SERVICE"
@@ -233,10 +233,6 @@ class MainService : Service() {
     private var imageReader: ImageReader? = null
     private var virtualDisplay: VirtualDisplay? = null
 
-    // Knox capture
-    private var knoxCapturer: KnoxCapturer? = null
-    private var isUsingKnox = false
-
     // audio
     private val audioRecordHandle = AudioRecordHandle(this, { isStart }, { isAudioStart })
 
@@ -244,46 +240,6 @@ class MainService : Service() {
     private lateinit var notificationManager: NotificationManager
     private lateinit var notificationChannel: String
     private lateinit var notificationBuilder: NotificationCompat.Builder
-
-    fun getIsUsingKnox(): Boolean {
-        return isUsingKnox
-    }
-
-    /**
-     * Expose the service handler so DispatcherActivity can post work on it.
-     */
-    fun getServiceHandler(): Handler? = serviceHandler
-
-    /**
-     * Called by DispatcherActivity after it has successfully negotiated a session with
-     * CaptureControlService and bound + initialized CaptureService.
-     * The KnoxCapturer is ready for use — Rust can trigger startCapture() at any time.
-     */
-    fun onKnoxSessionReady(capturer: KnoxCapturer) {
-        Log.i(logTag, "onKnoxSessionReady: Knox session handed off from DispatcherActivity")
-        synchronized(this) {
-            knoxCapturer = capturer
-            isUsingKnox = true
-            _isReady = true
-        }
-        checkMediaPermission()
-    }
-
-    /**
-     * Called when the Fort CT session has ended (DispatcherActivity finishing,
-     * CaptureControlService disconnected, etc.). Resets Knox state so the app
-     * can fall back to MediaProjection or wait for a new session.
-     */
-    fun onKnoxSessionEnded() {
-        Log.i(logTag, "onKnoxSessionEnded: Knox session ended, resetting state")
-        synchronized(this) {
-            knoxCapturer = null
-            isUsingKnox = false
-            _isReady = false
-        }
-        stopCapture()
-        checkMediaPermission()
-    }
 
     override fun onCreate() {
         super.onCreate()
@@ -303,10 +259,6 @@ class MainService : Service() {
         FFI.startServer(configPath, "")
 
         createForegroundNotification()
-
-        // Knox/Fort CT capture is now initiated by DispatcherActivity, not auto-started here.
-        // DispatcherActivity negotiates the session with CaptureControlService and then
-        // calls onKnoxSessionReady() to hand off the KnoxCapturer.
     }
 
     override fun onDestroy() {
@@ -317,8 +269,8 @@ class MainService : Service() {
 
     private var isHalfScale: Boolean? = null;
     private fun updateScreenInfo(orientation: Int) {
-        if (isUsingKnox) {
-          Log.d(logTag, "using knox? $isUsingKnox, skipping updateScreenInfo")
+        if (KnoxService.isActive) {
+          Log.d(logTag, "Knox session active, skipping updateScreenInfo")
           return
         }
         var w: Int
@@ -400,13 +352,10 @@ class MainService : Service() {
                     FFI.startService()
                 }
 
-                // If Knox session is already active (driven by DispatcherActivity), skip
-                // MediaProjection since CaptureService is providing capture.
-                synchronized(this@MainService) {
-                    if (isUsingKnox && _isReady) {
-                        Log.i(logTag, "Knox session already active via DispatcherActivity, skipping MediaProjection")
-                        return@post
-                    }
+                // If Knox session active (KnoxService), skip MediaProjection
+                if (KnoxService.isActive) {
+                    Log.i(logTag, "Knox session active, skipping MediaProjection")
+                    return@post
                 }
 
                 // No Knox session — proceed with MediaProjection path
@@ -517,19 +466,16 @@ class MainService : Service() {
             Log.d(logTag, "skipping")
             return true
         }
-        if (isUsingKnox && knoxCapturer != null) {
-            // In the DispatcherActivity flow, initCapture() was already called during
-            // session negotiation. The KnoxCapturer is already bound, initialized, and
-            // the frame callback is registered. We just need to enable the video pipeline.
-            Log.i(logTag, "startCapture: Knox session active, enabling video pipeline")
+        if (KnoxService.isActive) {
+            // Knox path: KnoxCapturer already initialized capture and registered
+            // frame callback. KnoxService already enabled video pipeline.
+            Log.i(logTag, "startCapture: Knox session active, nothing to do")
             _isStart = true
-            FFI.setFrameRawEnable("video", true)
             MainActivity.rdClipboardManager?.setCaptureStarted(_isStart)
             return true
         }
         
         updateScreenInfo(resources.configuration.orientation)
-        isUsingKnox = false
         return startMediaProjectionCapture()
     }
 
@@ -540,8 +486,9 @@ class MainService : Service() {
         _isStart = false
         MainActivity.rdClipboardManager?.setCaptureStarted(_isStart)
         
-        if (isUsingKnox) {
-            knoxCapturer?.releaseCapture()
+        if (KnoxService.isActive) {
+            // Knox capture lifecycle managed by KnoxService — nothing to release here
+            return
         } else {
             if (reuseVirtualDisplay) {
                 // The virtual display video projection can be paused by calling `setSurface(null)`.
@@ -581,17 +528,6 @@ class MainService : Service() {
 
         stopCapture()
 
-        // Signal DispatcherActivity to finish, which unbinds CaptureControlService
-        // and ends the Fort CT session. DispatcherActivity handles its own
-        // CaptureService unbinding in teardownCurrentSession().
-        activeDispatcher?.requestFinish()
-        activeDispatcher = null
-
-        // Clean up Knox state (in case DispatcherActivity didn't handle it)
-        knoxCapturer?.unbind()
-        knoxCapturer = null
-        isUsingKnox = false
-
         if (reuseVirtualDisplay) {
             virtualDisplay?.release()
             virtualDisplay = null
@@ -605,20 +541,22 @@ class MainService : Service() {
     }
 
     fun checkMediaPermission(): Boolean {
-        Log.d(logTag, "checking media permissions, is using knox? $isUsingKnox, is input service open? ${InputService.isOpen}, is this or that to string? ${(isUsingKnox || InputService.isOpen)}.. and is this ready? $isReady")
+        val knoxActive = KnoxService.isActive
+        val ready = _isReady || knoxActive
+        Log.d(logTag, "checkMediaPermission: knoxActive=$knoxActive, isReady=$_isReady, inputOpen=${InputService.isOpen}")
         Handler(Looper.getMainLooper()).post {
             MainActivity.flutterMethodChannel?.invokeMethod(
                 "on_state_changed",
-                mapOf("name" to "media", "value" to isReady.toString())
+                mapOf("name" to "media", "value" to ready.toString())
             )
         }
         Handler(Looper.getMainLooper()).post {
             MainActivity.flutterMethodChannel?.invokeMethod(
                 "on_state_changed",
-                mapOf("name" to "input", "value" to (isUsingKnox || InputService.isOpen).toString())
+                mapOf("name" to "input", "value" to (knoxActive || InputService.isOpen).toString())
             )
         }
-        return isReady
+        return ready
     }
 
     private fun startRawVideoRecorder(mp: MediaProjection) {
