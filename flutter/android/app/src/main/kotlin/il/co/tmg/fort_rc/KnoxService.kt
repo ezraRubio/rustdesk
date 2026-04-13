@@ -3,6 +3,7 @@ package il.co.tmg.fort_rc
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import androidx.core.app.NotificationCompat
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
@@ -13,7 +14,6 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.Process
 import android.util.Log
-import androidx.core.app.NotificationCompat
 import ffi.FFI
 import io.flutter.embedding.android.FlutterActivity
 import android.content.Context
@@ -30,14 +30,9 @@ import android.util.DisplayMetrics
 import android.annotation.SuppressLint
 import android.app.PendingIntent.FLAG_IMMUTABLE
 import android.app.PendingIntent.FLAG_UPDATE_CURRENT
-import com.carriez.flutter_hbb.InputService
-import com.carriez.flutter_hbb.KEY_APP_DIR_CONFIG_PATH
-import com.carriez.flutter_hbb.KEY_SHARED_PREFERENCES
 import com.carriez.flutter_hbb.LEFT_DOWN
-import com.carriez.flutter_hbb.MainActivity
 import com.carriez.flutter_hbb.R
 import com.carriez.flutter_hbb.SCREEN_INFO
-import com.carriez.flutter_hbb.translate
 
 /**
  * KnoxService is a foreground service that owns the full fort rc session lifecycle.
@@ -47,11 +42,8 @@ import com.carriez.flutter_hbb.translate
  *   2. Fort CT (unattended): Fort CT → DispatcherActivity → KnoxService → KnoxCapturer
  *
  * TODO:
- * - is notifications needed as in MainService?
- * - what happens when stop_capture is received from rust (rustdesk server) ?
  * - what happens on concurrent session?
  * - should there be support for half_scale signal from rust?
- * - can i fully disconnect from flutter or do i need to send state_change? 
  * - add_connection should trigger the START_SESSION message for fct
  */
 class KnoxService : Service() {
@@ -104,32 +96,19 @@ class KnoxService : Service() {
     fun rustSetByName(name: String, arg1: String, arg2: String) {
         when (name) {
             "add_connection" -> {
-              //TODO: 6
+              //TODO: 3
                 try {
                     val jsonObject = JSONObject(arg1)
                     val id = jsonObject["id"] as Int
                     val username = jsonObject["name"] as String
                     val peerId = jsonObject["peer_id"] as String
-                    val authorized = jsonObject["authorized"] as Boolean
-                    val isFileTransfer = jsonObject["is_file_transfer"] as Boolean
-                    val type = if (isFileTransfer) {
-                        translate("Transfer file")
-                    } else {
-                        translate("Share screen")
-                    }
-                    if (authorized) {
-                        if (!isFileTransfer && !isStart) {
-                            _isStart = true
-                            val capturer = knoxCapturer
-                            if (capturer != null) {
-                              capturer.startCapture()
-                            }
+                    if (!isStart) {
+                        _isStart = true
+                        val capturer = knoxCapturer
+                        if (capturer != null) {
+                          capturer.startCapture()
                         }
-                        Log.w(LOG_TAG, "client authorized")
-                        // onClientAuthorizedNotification(id, type, username, peerId)
-                    } else {
-                        Log.w(LOG_TAG, "login request")
-                        // loginRequestNotification(id, type, username, peerId)
+                        Log.w(LOG_TAG, "client connected")
                     }
                 } catch (e: JSONException) {
                     e.printStackTrace()
@@ -139,21 +118,17 @@ class KnoxService : Service() {
                 Log.w(LOG_TAG, "Voice call not supported in Knox session, ignoring")
             }
             "stop_capture" -> {
-              //TODO: 2
-                Log.d(LOG_TAG, "from rust:stop_capture, what to do?")
-                // stopCapture()
+                knoxCapturer?.stopSession("stop_capture signal received from client")
             }
             "half_scale" -> {
-                val halfScale = arg1.toBoolean()
-                if (isHalfScale != halfScale) {
-                    isHalfScale = halfScale
-                    Log.d(LOG_TAG, "half_scale received from rust, not supported on this path")
-                    //TODO: 4
-                }
-                
+                Log.d(LOG_TAG, "half_scale received from rust, not supported on this path")
+                // val halfScale = arg1.toBoolean()
+                // if (isHalfScale != halfScale) {
+                //     isHalfScale = halfScale
+                //     //TODO: 2
+                // }
             }
-            else -> {
-            }
+            else -> { }
         }
     }
 
@@ -208,17 +183,9 @@ class KnoxService : Service() {
 
         // Initialize FFI/Rust
         FFI.init(this)
-        val prefs = applicationContext.getSharedPreferences(
-          //TODO: 5
-            KEY_SHARED_PREFERENCES, FlutterActivity.MODE_PRIVATE
-        )
-        val configPath = prefs.getString(KEY_APP_DIR_CONFIG_PATH, "") ?: ""
-        FFI.startServer(configPath, "")
+        FFI.startServer("", "")
 
-        // Initialize the notification system
-        // TODO: 1
-        notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationBuilder = NotificationCompat.Builder(this,CHANNEL_ID)
+        // Go foreground
         createNotificationChannel()
         startForeground(
             NOTIFICATION_ID,
@@ -239,7 +206,7 @@ class KnoxService : Service() {
 
                 if (knoxCapturer != null) {
                     Log.w(LOG_TAG, "Session already active, ignoring new request")
-                    // TODO: 3
+                    // TODO: 1
                     return START_STICKY
                 }
 
@@ -280,8 +247,6 @@ class KnoxService : Service() {
         Log.i(LOG_TAG, "Session ready — enabling video pipeline")
         isActive = true
         FFI.setFrameRawEnable("video", true)
-        updateNotification("Session active")
-        notifyFlutterStateChanged()
     }
 
     /**
@@ -293,7 +258,6 @@ class KnoxService : Service() {
         isActive = false
         FFI.setFrameRawEnable("video", false)
         knoxCapturer = null
-        notifyFlutterStateChanged()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
@@ -313,31 +277,9 @@ class KnoxService : Service() {
     }
 
     // ========================================================================
-    // Flutter state propagation
-    // ========================================================================
-
-    /**
-     * TODO: 5
-     * this mimics checkPermissions from MainService
-     */
-    private fun notifyFlutterStateChanged() {
-        Handler(Looper.getMainLooper()).post {
-            val active = isActive
-            MainActivity.flutterMethodChannel?.invokeMethod(
-                "on_state_changed",
-                mapOf("name" to "media", "value" to active.toString())
-            )
-            MainActivity.flutterMethodChannel?.invokeMethod(
-                "on_state_changed",
-                mapOf("name" to "input", "value" to (active || InputService.isOpen).toString())
-            )
-        }
-    }
-
-    // ========================================================================
     // Notification
-    // TODO: 1
     //
+    // needed so this service can remain in the foreground 
     // ========================================================================
 
     private fun createNotificationChannel() {
@@ -362,61 +304,4 @@ class KnoxService : Service() {
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
     }
-
-    private fun updateNotification(contentText: String) {
-        val notification = buildNotification(contentText)
-        getSystemService(NotificationManager::class.java)
-            .notify(NOTIFICATION_ID, notification)
-    }
-
-    // private fun loginRequestNotification(
-    //     clientID: Int,
-    //     type: String,
-    //     username: String,
-    //     peerId: String
-    // ) {
-    //     val notification = notificationBuilder
-    //         .setOngoing(false)
-    //         .setPriority(NotificationCompat.PRIORITY_MAX)
-    //         .setContentTitle(translate("Do you accept?"))
-    //         .setContentText("$type:$username-$peerId")
-    //         .build()
-    //     notificationManager.notify(getClientNotifyID(clientID), notification)
-    // }
-    //
-    // private fun onClientAuthorizedNotification(
-    //     clientID: Int,
-    //     type: String,
-    //     username: String,
-    //     peerId: String
-    // ) {
-    //     cancelNotification(clientID)
-    //     val notification = notificationBuilder
-    //         .setOngoing(false)
-    //         .setPriority(NotificationCompat.PRIORITY_MAX)
-    //         .setContentTitle("$type ${translate("Established")}")
-    //         .setContentText("$username - $peerId")
-    //         .build()
-    //     notificationManager.notify(getClientNotifyID(clientID), notification)
-    // }
-    //
-    // private fun getClientNotifyID(clientID: Int): Int {
-    //     return clientID + NOTIFY_ID_OFFSET
-    // }
-    //
-    // fun cancelNotification(clientID: Int) {
-    //     notificationManager.cancel(getClientNotifyID(clientID))
-    // }
-    //
-    // private fun setTextNotification(_title: String?, _text: String?) {
-    //     val title = _title ?: DEFAULT_NOTIFY_TITLE
-    //     val text = _text ?: translate(DEFAULT_NOTIFY_TEXT)
-    //     val notification = notificationBuilder
-    //         .clearActions()
-    //         .setStyle(null)
-    //         .setContentTitle(title)
-    //         .setContentText(text)
-    //         .build()
-    //     notificationManager.notify(DEFAULT_NOTIFY_ID, notification)
-    // }
 }
