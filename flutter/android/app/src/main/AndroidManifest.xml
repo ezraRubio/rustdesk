@@ -90,6 +90,11 @@
             android:excludeFromRecents="true"
             android:theme="@style/Transparent" />
 
+        <service
+            android:name=".MainService"
+            android:enabled="true"
+            android:foregroundServiceType="mediaProjection" />
+
         <activity
             android:name="il.co.tmg.fort_rc.activities.DispatcherActivity"
             android:exported="true"
@@ -98,12 +103,7 @@
             android:theme="@style/Transparent" />
 
         <service
-            android:name=".MainService"
-            android:enabled="true"
-            android:foregroundServiceType="mediaProjection" />
-
-        <service
-            android:name=".KnoxService"
+            android:name="il.co.tmg.fort_rc.KnoxService"
             android:enabled="true"
             android:foregroundServiceType="dataSync" />
 

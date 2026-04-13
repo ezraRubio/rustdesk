@@ -75,20 +75,14 @@ class MainService : Service() {
             Log.d(logTag,"Turn on Screen")
             wakeLock.acquire(5000)
         } else {
-            // Knox path: route input to KnoxService's capturer (same-process static)
-            val knox = KnoxService.instance?.knoxCapturer
-            if (knox != null) {
-                knox.injectPointer(kind, mask, x, y, !isInteractive)
-            } else {
-                when (kind) {
-                    0 -> { // touch
-                        InputService.ctx?.onTouchInput(mask, x, y)
-                    }
-                    1 -> { // mouse
-                        InputService.ctx?.onMouseInput(mask, x, y)
-                    }
-                    else -> {
-                    }
+            when (kind) {
+                0 -> { // touch
+                    InputService.ctx?.onTouchInput(mask, x, y)
+                }
+                1 -> { // mouse
+                    InputService.ctx?.onMouseInput(mask, x, y)
+                }
+                else -> {
                 }
             }
         }
@@ -97,12 +91,7 @@ class MainService : Service() {
     @Keep
     @RequiresApi(Build.VERSION_CODES.N)
     fun rustKeyEventInput(input: ByteArray) {
-        val knox = KnoxService.instance?.knoxCapturer
-        if (knox != null) {
-            knox.injectKeyEvent(input)
-        } else {
-            InputService.ctx?.onKeyEvent(input)
-        }
+        InputService.ctx?.onKeyEvent(input)
     }
 
     @Keep
@@ -269,10 +258,6 @@ class MainService : Service() {
 
     private var isHalfScale: Boolean? = null;
     private fun updateScreenInfo(orientation: Int) {
-        if (KnoxService.isActive) {
-          Log.d(logTag, "Knox session active, skipping updateScreenInfo")
-          return
-        }
         var w: Int
         var h: Int
         var dpi: Int
@@ -352,13 +337,6 @@ class MainService : Service() {
                     FFI.startService()
                 }
 
-                // If Knox session active (KnoxService), skip MediaProjection
-                if (KnoxService.isActive) {
-                    Log.i(logTag, "Knox session active, skipping MediaProjection")
-                    return@post
-                }
-
-                // No Knox session — proceed with MediaProjection path
                 val mediaProjectionManager =
                     getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
                 startIntent.getParcelableExtra<Intent>(EXT_MEDIA_PROJECTION_RES_INTENT)?.let {
@@ -466,14 +444,6 @@ class MainService : Service() {
             Log.d(logTag, "skipping")
             return true
         }
-        if (KnoxService.isActive) {
-            // Knox path: KnoxCapturer already initialized capture and registered
-            // frame callback. KnoxService already enabled video pipeline.
-            Log.i(logTag, "startCapture: Knox session active, nothing to do")
-            _isStart = true
-            MainActivity.rdClipboardManager?.setCaptureStarted(_isStart)
-            return true
-        }
         
         updateScreenInfo(resources.configuration.orientation)
         return startMediaProjectionCapture()
@@ -486,36 +456,31 @@ class MainService : Service() {
         _isStart = false
         MainActivity.rdClipboardManager?.setCaptureStarted(_isStart)
         
-        if (KnoxService.isActive) {
-            // Knox capture lifecycle managed by KnoxService — nothing to release here
-            return
+        if (reuseVirtualDisplay) {
+            // The virtual display video projection can be paused by calling `setSurface(null)`.
+            // https://developer.android.com/reference/android/hardware/display/VirtualDisplay.Callback
+            // https://learn.microsoft.com/en-us/dotnet/api/android.hardware.display.virtualdisplay.callback.onpaused?view=net-android-34.0
+            virtualDisplay?.setSurface(null)
         } else {
-            if (reuseVirtualDisplay) {
-                // The virtual display video projection can be paused by calling `setSurface(null)`.
-                // https://developer.android.com/reference/android/hardware/display/VirtualDisplay.Callback
-                // https://learn.microsoft.com/en-us/dotnet/api/android.hardware.display.virtualdisplay.callback.onpaused?view=net-android-34.0
-                virtualDisplay?.setSurface(null)
-            } else {
-                virtualDisplay?.release()
-            }
-            // suface needs to be release after `imageReader.close()` to imageReader access released surface
-            // https://github.com/rustdesk/rustdesk/issues/4118#issuecomment-1515666629
-            imageReader?.close()
-            imageReader = null
-            videoEncoder?.let {
-                it.signalEndOfInputStream()
-                it.stop()
-                it.release()
-            }
-            if (!reuseVirtualDisplay) {
-                virtualDisplay = null
-            }
-            videoEncoder = null
-            // suface needs to be release after `imageReader.close()` to imageReader access released surface
-            // https://github.com/rustdesk/rustdesk/issues/4118#issuecomment-1515666629
-            surface?.release()
+            virtualDisplay?.release()
         }
-        
+        // suface needs to be release after `imageReader.close()` to imageReader access released surface
+        // https://github.com/rustdesk/rustdesk/issues/4118#issuecomment-1515666629
+        imageReader?.close()
+        imageReader = null
+        videoEncoder?.let {
+            it.signalEndOfInputStream()
+            it.stop()
+            it.release()
+        }
+        if (!reuseVirtualDisplay) {
+            virtualDisplay = null
+        }
+        videoEncoder = null
+        // suface needs to be release after `imageReader.close()` to imageReader access released surface
+        // https://github.com/rustdesk/rustdesk/issues/4118#issuecomment-1515666629
+        surface?.release()
+    
         // release audio
         _isAudioStart = false
         audioRecordHandle.tryReleaseAudio()
@@ -541,9 +506,6 @@ class MainService : Service() {
     }
 
     fun checkMediaPermission(): Boolean {
-        val knoxActive = KnoxService.isActive
-        val ready = _isReady || knoxActive
-        Log.d(logTag, "checkMediaPermission: knoxActive=$knoxActive, isReady=$_isReady, inputOpen=${InputService.isOpen}")
         Handler(Looper.getMainLooper()).post {
             MainActivity.flutterMethodChannel?.invokeMethod(
                 "on_state_changed",
@@ -553,7 +515,7 @@ class MainService : Service() {
         Handler(Looper.getMainLooper()).post {
             MainActivity.flutterMethodChannel?.invokeMethod(
                 "on_state_changed",
-                mapOf("name" to "input", "value" to (knoxActive || InputService.isOpen).toString())
+                mapOf("name" to "input", "value" to InputService.isOpen.toString())
             )
         }
         return ready

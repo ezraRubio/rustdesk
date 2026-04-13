@@ -1,4 +1,4 @@
-package com.carriez.flutter_hbb
+package il.co.tmg.fort_rc 
 
 import android.content.ComponentName
 import android.content.Context
@@ -15,9 +15,9 @@ import android.os.SharedMemory
 import android.util.Log
 import android.view.KeyEvent as KeyEventAndroid
 import ffi.FFI
-import hbb.KeyEventConverter
-import hbb.MessageOuterClass.KeyEvent as ProtoKeyEvent
-import hbb.MessageOuterClass.KeyboardMode
+import com.carriez.flutter_hbh.KeyEventConverter
+import com.carriez.flutter_hbb.MessageOuterClass.KeyEvent as ProtoKeyEvent
+import com.carriez.flutter_hbb.MessageOuterClass.KeyboardMode
 import il.co.tmg.fort_ct.ICaptureService
 import il.co.tmg.fort_ct.IFrameCallback
 import org.json.JSONObject
@@ -62,8 +62,6 @@ data class SessionPayload(
  *   1. **Control** — Messenger IPC to CaptureControlService (session negotiation).
  *      Keeping this bound IS the session — unbinding ends it.
  *   2. **Capture** — AIDL ICaptureService (screen capture, input injection).
- *
- * Lives inside KnoxService (foreground service). No dependency on MainService.
  *
  * Lifecycle:
  *   1. KnoxService creates KnoxCapturer, calls startSession(sessionId)
@@ -201,11 +199,6 @@ class KnoxCapturer(
     // Public API — called by KnoxService
     // ========================================================================
 
-    /**
-     * Start Fort CT session. Binds CaptureControlService and begins handshake.
-     * On success, KnoxService.onSessionReady() called.
-     * On failure, KnoxService.onSessionEnded() called via stopSession().
-     */
     fun startSession(sessionId: String) {
         Log.i(LOG_TAG_KNOX, "startSession: sessionId=$sessionId")
         stopped = false
@@ -213,10 +206,6 @@ class KnoxCapturer(
         bindControlService()
     }
 
-    /**
-     * Stop session and tear down all connections in order.
-     * Safe to call multiple times. Notifies KnoxService.onSessionEnded().
-     */
     fun stopSession(reason: String) {
         if (stopped) return
         Log.i(LOG_TAG_KNOX, "stopSession: $reason")
@@ -236,12 +225,11 @@ class KnoxCapturer(
         service.onSessionEnded(reason)
     }
 
-    /**
-     * Whether session successfully started and currently running.
-     */
     fun isRunning(): Boolean = isSessionRunning && !stopped
 
     // ========================================================================
+    // FCT <-> FRC Handshake
+    //
     // Step 1: Bind CaptureControlService
     // ========================================================================
 
@@ -331,13 +319,12 @@ class KnoxCapturer(
                 "isUserConsentRequired=${payload.isUserConsentRequired}")
 
         if (payload.isUserConsentRequired) {
-            // Attended flow: not yet implemented (Point 1).
+            // Attended flow: not yet implemented.
             Log.w(LOG_TAG_KNOX, "Attended session — not yet implemented, aborting")
             stopSession("Attended sessions not yet implemented")
             return
         }
 
-        // Unattended: bind CaptureService, prepare, go running
         pendingStartAfterPrepare = true
         bindCaptureService()
     }
@@ -379,7 +366,8 @@ class KnoxCapturer(
 
         try {
             svc.initCapture()
-            svc.registerFrameCallback(knoxFrameCallback)
+            //TODO: move this to add_connection signal
+            // svc.registerFrameCallback(knoxFrameCallback)
 
             val knoxWidth = svc.screenWidth
             val knoxHeight = svc.screenHeight
@@ -415,13 +403,15 @@ class KnoxCapturer(
         }
 
         val remoteId = FFI.getMyId()
+        val password = FFI.getTemporaryPassword()
         if (remoteId.isBlank()) {
             Log.w(LOG_TAG_KNOX, "Device remote ID blank, using fallback UUID")
         }
         generatedRemoteId = remoteId.ifBlank { "knox-${java.util.UUID.randomUUID()}" }
         generatedToken = generateSecureToken()
 
-        Log.d(LOG_TAG_KNOX, "Sending MSG_START_SESSION: remoteId=$generatedRemoteId")
+        Log.d(LOG_TAG_KNOX, "Sending MSG_START_SESSION: generatedRemoteId=$generatedRemoteId")
+        Log.d(LOG_TAG_KNOX, "https://fortdesk.lan/#/connect/$remoteId?password=$password")
         val msg = Message.obtain(null, MSG_START_SESSION).apply {
             replyTo = replyMessenger
             data = Bundle().apply {
@@ -439,6 +429,7 @@ class KnoxCapturer(
     }
 
     // ========================================================================
+    // TODO: MSG_START_SESSION should be READY_FOR_CONNECTION
     // Step 6: Handle MSG_START_SESSION reply — session RUNNING
     // ========================================================================
 
@@ -455,14 +446,12 @@ class KnoxCapturer(
         isSessionRunning = true
         pendingStartAfterPrepare = false
 
-        // Notify KnoxService — enables video pipeline, updates Flutter
         service.onSessionReady()
     }
 
     // ========================================================================
-    // Capture operations — called by MainService for input routing
+    // Capturer operations
     // ========================================================================
-
     fun isBound(): Boolean = isCaptureBound && captureService != null
 
     fun releaseCapture() {
