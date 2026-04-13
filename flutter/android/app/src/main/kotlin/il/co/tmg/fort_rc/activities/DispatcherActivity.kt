@@ -4,7 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
-import com.carriez.flutter_hbb.KnoxService
+import il.co.tmg.fort_rc.KnoxService
 
 /**
  * Entry point started by Fort Control Tower for remote-control sessions.

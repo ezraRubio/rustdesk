@@ -30,6 +30,14 @@ import android.util.DisplayMetrics
 import android.annotation.SuppressLint
 import android.app.PendingIntent.FLAG_IMMUTABLE
 import android.app.PendingIntent.FLAG_UPDATE_CURRENT
+import com.carriez.flutter_hbb.InputService
+import com.carriez.flutter_hbb.KEY_APP_DIR_CONFIG_PATH
+import com.carriez.flutter_hbb.KEY_SHARED_PREFERENCES
+import com.carriez.flutter_hbb.LEFT_DOWN
+import com.carriez.flutter_hbb.MainActivity
+import com.carriez.flutter_hbb.R
+import com.carriez.flutter_hbb.SCREEN_INFO
+import com.carriez.flutter_hbb.translate
 
 /**
  * KnoxService is a foreground service that owns the full fort rc session lifecycle.
@@ -112,6 +120,10 @@ class KnoxService : Service() {
                     if (authorized) {
                         if (!isFileTransfer && !isStart) {
                             _isStart = true
+                            val capturer = knoxCapturer
+                            if (capturer != null) {
+                              capturer.startCapture()
+                            }
                         }
                         Log.w(LOG_TAG, "client authorized")
                         // onClientAuthorizedNotification(id, type, username, peerId)
@@ -155,6 +167,10 @@ class KnoxService : Service() {
         private const val CHANNEL_ID = "fort_knox_capture"
         private const val CHANNEL_NAME = "Fort Remote Control"
         private const val NOTIFICATION_ID = 1002
+
+        @Volatile
+        var isActive: Boolean = false
+            private set
     }
 
     private val powerManager: PowerManager by lazy{
@@ -262,6 +278,7 @@ class KnoxService : Service() {
      */
     fun onSessionReady() {
         Log.i(LOG_TAG, "Session ready — enabling video pipeline")
+        isActive = true
         FFI.setFrameRawEnable("video", true)
         updateNotification("Session active")
         notifyFlutterStateChanged()
@@ -273,6 +290,7 @@ class KnoxService : Service() {
      */
     fun onSessionEnded(reason: String) {
         Log.w(LOG_TAG, "Session ended: $reason")
+        isActive = false
         FFI.setFrameRawEnable("video", false)
         knoxCapturer = null
         notifyFlutterStateChanged()

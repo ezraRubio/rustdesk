@@ -180,7 +180,6 @@ class MainService : Service() {
                 val halfScale = arg1.toBoolean()
                 if (isHalfScale != halfScale) {
                     isHalfScale = halfScale
-                    Log.d(logTag, "half_scale received from rust")
                     updateScreenInfo(resources.configuration.orientation)
                 }
                 
@@ -509,7 +508,7 @@ class MainService : Service() {
         Handler(Looper.getMainLooper()).post {
             MainActivity.flutterMethodChannel?.invokeMethod(
                 "on_state_changed",
-                mapOf("name" to "media", "value" to ready.toString())
+                mapOf("name" to "media", "value" to isReady.toString())
             )
         }
         Handler(Looper.getMainLooper()).post {
@@ -518,7 +517,7 @@ class MainService : Service() {
                 mapOf("name" to "input", "value" to InputService.isOpen.toString())
             )
         }
-        return ready
+        return isReady
     }
 
     private fun startRawVideoRecorder(mp: MediaProjection) {

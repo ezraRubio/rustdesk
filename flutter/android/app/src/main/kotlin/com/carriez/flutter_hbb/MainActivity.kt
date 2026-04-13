@@ -73,7 +73,7 @@ class MainActivity : FlutterActivity() {
 
     override fun onResume() {
         super.onResume()
-        val inputPer = KnoxService.isActive || InputService.isOpen
+        val inputPer = InputService.isOpen
         activity.runOnUiThread {
             flutterMethodChannel?.invokeMethod(
                 "on_state_changed",
@@ -133,12 +133,6 @@ class MainActivity : FlutterActivity() {
                     Intent(activity, MainService::class.java).also {
                         bindService(it, serviceConnection, Context.BIND_AUTO_CREATE)
                     }
-                    // Knox session active (KnoxService) — skip MediaProjection
-                    if (KnoxService.isActive) {
-                        Log.i(logTag, "Knox session already active, skipping MediaProjection")
-                        result.success(true)
-                        return@setMethodCallHandler
-                    }
                     requestMediaProjection()
                     result.success(true)
                 }
@@ -191,11 +185,11 @@ class MainActivity : FlutterActivity() {
                 "check_service" -> {
                     Companion.flutterMethodChannel?.invokeMethod(
                         "on_state_changed",
-                        mapOf("name" to "input", "value" to (KnoxService.isActive || InputService.isOpen).toString())
+                        mapOf("name" to "input", "value" to InputService.isOpen.toString())
                     )
                     Companion.flutterMethodChannel?.invokeMethod(
                         "on_state_changed",
-                        mapOf("name" to "media", "value" to (MainService.isReady || KnoxService.isActive).toString())
+                        mapOf("name" to "media", "value" to MainService.isReady .toString())
                     )
                     result.success(true)
                 }

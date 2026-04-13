@@ -15,9 +15,10 @@ import android.os.SharedMemory
 import android.util.Log
 import android.view.KeyEvent as KeyEventAndroid
 import ffi.FFI
-import com.carriez.flutter_hbh.KeyEventConverter
-import com.carriez.flutter_hbb.MessageOuterClass.KeyEvent as ProtoKeyEvent
-import com.carriez.flutter_hbb.MessageOuterClass.KeyboardMode
+import com.carriez.flutter_hbb.SCREEN_INFO
+import hbb.KeyEventConverter
+import hbb.MessageOuterClass.KeyEvent as ProtoKeyEvent
+import hbb.MessageOuterClass.KeyboardMode
 import il.co.tmg.fort_ct.ICaptureService
 import il.co.tmg.fort_ct.IFrameCallback
 import org.json.JSONObject
@@ -366,8 +367,6 @@ class KnoxCapturer(
 
         try {
             svc.initCapture()
-            //TODO: move this to add_connection signal
-            // svc.registerFrameCallback(knoxFrameCallback)
 
             val knoxWidth = svc.screenWidth
             val knoxHeight = svc.screenHeight
@@ -453,6 +452,14 @@ class KnoxCapturer(
     // Capturer operations
     // ========================================================================
     fun isBound(): Boolean = isCaptureBound && captureService != null
+
+    fun startCapture() {
+      //TODO: move this to add_connection signal
+      val capServ = captureService
+      if (capServ != null) {
+          capServ.registerFrameCallback(knoxFrameCallback)
+      }
+    }
 
     fun releaseCapture() {
         synchronized(mappingLock) {
