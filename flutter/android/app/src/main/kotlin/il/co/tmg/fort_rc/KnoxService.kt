@@ -118,7 +118,7 @@ class KnoxService : Service() {
                 Log.w(LOG_TAG, "Voice call not supported in Knox session, ignoring")
             }
             "stop_capture" -> {
-                knoxCapturer?.stopSession("stop_capture signal received from client")
+                stopSession("stop_capture signal received from client")
             }
             "half_scale" -> {
                 Log.d(LOG_TAG, "half_scale received from rust, not supported on this path")
@@ -229,7 +229,7 @@ class KnoxService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
-        knoxCapturer?.stopSession("KnoxService destroyed")
+        stopSession("KnoxService destroyed")
         knoxCapturer = null
         serviceLooper?.quitSafely()
         super.onDestroy()
