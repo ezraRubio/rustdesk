@@ -416,7 +416,7 @@ class KnoxCapturer(
         if (stopped) return
         val sessionId = remoteSessionId ?: return
         val messenger = controlMessenger ?: run {
-            stopSession("Control messenger lost before MSG_START_SESSION")
+            stopSession("Control messenger lost before MSG_READY_FOR_CONNECTION")
             return
         }
 
@@ -498,6 +498,10 @@ class KnoxCapturer(
       Log.i(LOG_TAG_KNOX, "step 7")
         if (stopped) return
         val sessionId = remoteSessionId ?: return
+        val messenger = controlMessenger ?: run {
+            stopSession("Control messenger lost before MSG_START_SESSION")
+            return
+        }
         val msg = Message.obtain(null, MSG_START_SESSION).apply {
             replyTo = replyMessenger
             data = Bundle().apply {
@@ -661,7 +665,7 @@ class KnoxCapturer(
         val obj = JSONObject(json)
         return SessionPayload(
             remoteSessionId = obj.getString("remoteSessionId"),
-            status = SessionState(obj.optString("status", "")),
+            status = SessionState.valueOf(obj.optString("status", "")),
             url = obj.optString("url", null),
             key = obj.optString("key", null),
             isUserConsentRequired = obj.optBoolean("isUserConsentRequired", true)
