@@ -34,7 +34,8 @@ private const val LOG_TAG_KNOX = "KnoxCapturer"
 
 // Messenger message codes
 private const val MSG_GET_SESSION_INFO = 1
-private const val MSG_START_SESSION = 2
+private const val MSG_READY_FOR_CONNECTION = 2
+private const val MSG_START_SESSION = 3
 
 // Bundle keys
 private const val KEY_REMOTE_SESSION_ID = "remote_session_id"
@@ -48,9 +49,18 @@ private const val TOKEN_BYTE_LENGTH = 32
 /**
  * Represents session payload returned by CaptureControlService in MSG_GET_SESSION_INFO.
  */
+enum class SessionState(val status: String) {
+    CREATED("created"),
+    PENDING("pending"),
+    READY("ready"),
+    RUNNING("running"),
+    CLOSED("closed"),
+    FAILED("failed")
+}
+
 data class SessionPayload(
     val remoteSessionId: String,
-    val status: String,
+    val status: SessionState,
     val url: String?,
     val key: String?,
     val isUserConsentRequired: Boolean
@@ -90,9 +100,10 @@ class KnoxCapturer(
 
     // ---- Session state ----
     private var remoteSessionId: String? = null
-    private var sessionPayload: SessionPayload? = null
+    // private var sessionPayload: SessionPayload? = null
     private var generatedRemoteId: String? = null
     private var generatedToken: String? = null
+    private var isSessionReady = false
     private var isSessionRunning = false
     private var isCapturePrepared = false
     private var pendingStartAfterPrepare = false
@@ -172,7 +183,7 @@ class KnoxCapturer(
 
     private val knoxFrameCallback = object : IFrameCallback.Stub() {
         override fun onFrameAvailable(memory: SharedMemory) {
-            if (stopped || !isSessionRunning) {
+            if (stopped || !isSessionReady) {
                 return
             }
 
@@ -211,13 +222,13 @@ class KnoxCapturer(
         if (stopped) return
         Log.i(LOG_TAG_KNOX, "stopSession: $reason")
         stopped = true
-        isSessionRunning = false
+        isSessionReady = false
 
         releaseCaptureQuietly()
         unbindCaptureQuietly()
         unbindControlQuietly()
 
-        sessionPayload = null
+        // sessionPayload = null
         generatedRemoteId = null
         generatedToken = null
         isCapturePrepared = false
@@ -226,8 +237,6 @@ class KnoxCapturer(
         service.onSessionEnded(reason)
     }
 
-    fun isRunning(): Boolean = isSessionRunning && !stopped
-
     // ========================================================================
     // FCT <-> FRC Handshake
     //
@@ -235,6 +244,7 @@ class KnoxCapturer(
     // ========================================================================
 
     private fun bindControlService() {
+      Log.i(LOG_TAG_KNOX, "step 1")
         if (stopped) return
         if (isControlBound) {
             requestSessionInfo()
@@ -259,6 +269,7 @@ class KnoxCapturer(
     // ========================================================================
 
     private fun requestSessionInfo() {
+      Log.i(LOG_TAG_KNOX, "step 2")
         if (stopped) return
         val sessionId = remoteSessionId ?: return
         val messenger = controlMessenger ?: return
@@ -280,9 +291,12 @@ class KnoxCapturer(
 
     // ========================================================================
     // Step 3: Validate session info reply
+    // TODO: must inject the host+key from session_info, into the current apps config
+    //
     // ========================================================================
 
     private fun handleGetSessionInfoReply(msg: Message) {
+      Log.i(LOG_TAG_KNOX, "step 3 with $msg")
         if (stopped) return
 
         if (msg.arg1 < 0) {
@@ -315,7 +329,7 @@ class KnoxCapturer(
             return
         }
 
-        sessionPayload = payload
+        // sessionPayload = payload
         Log.d(LOG_TAG_KNOX, "Session validated: status=${payload.status}, " +
                 "isUserConsentRequired=${payload.isUserConsentRequired}")
 
@@ -335,6 +349,7 @@ class KnoxCapturer(
     // ========================================================================
 
     private fun bindCaptureService() {
+      Log.i(LOG_TAG_KNOX, "step 4")
         if (stopped) return
         if (isCaptureBound) {
             prepareCaptureAfterBind()
@@ -359,8 +374,8 @@ class KnoxCapturer(
         val svc = captureService ?: return
 
         if (isCapturePrepared) {
-            if (pendingStartAfterPrepare && !isSessionRunning) {
-                sendStartSession()
+            if (pendingStartAfterPrepare && !isSessionReady) {
+                sendReadyForConnection()
             }
             return
         }
@@ -380,8 +395,8 @@ class KnoxCapturer(
 
             Log.d(LOG_TAG_KNOX, "Capture initialized: ${knoxWidth}x${knoxHeight}")
 
-            if (pendingStartAfterPrepare && !isSessionRunning) {
-                sendStartSession()
+            if (pendingStartAfterPrepare && !isSessionReady) {
+                sendReadyForConnection()
             }
         } catch (e: Exception) {
             Log.e(LOG_TAG_KNOX, "Failed to initialize capture", e)
@@ -390,10 +405,14 @@ class KnoxCapturer(
     }
 
     // ========================================================================
-    // Step 5: Send MSG_START_SESSION
+    // Step 5: Send MSG_READY_FOR_CONNECTION
+    // TODO: token == tmpPasswd
+    // so who needs to generate it? rust or me?
+    //
     // ========================================================================
 
-    private fun sendStartSession() {
+    private fun sendReadyForConnection() {
+      Log.i(LOG_TAG_KNOX, "step 5")
         if (stopped) return
         val sessionId = remoteSessionId ?: return
         val messenger = controlMessenger ?: run {
@@ -409,14 +428,80 @@ class KnoxCapturer(
         generatedRemoteId = remoteId.ifBlank { "knox-${java.util.UUID.randomUUID()}" }
         generatedToken = generateSecureToken()
 
-        Log.d(LOG_TAG_KNOX, "Sending MSG_START_SESSION: generatedRemoteId=$generatedRemoteId")
+        Log.d(LOG_TAG_KNOX, "Sending MSG_READY_FOR_CONNECTION: generatedRemoteId=$generatedRemoteId")
         Log.d(LOG_TAG_KNOX, "https://fortdesk.lan/#/connect/$remoteId?password=$password")
-        val msg = Message.obtain(null, MSG_START_SESSION).apply {
+        val msg = Message.obtain(null, MSG_READY_FOR_CONNECTION).apply {
             replyTo = replyMessenger
             data = Bundle().apply {
                 putString(KEY_REMOTE_SESSION_ID, sessionId)
                 putString(KEY_REMOTE_ID, generatedRemoteId)
                 putString(KEY_TOKEN, generatedToken)
+            }
+        }
+        try {
+            messenger.send(msg)
+        } catch (e: RemoteException) {
+            Log.e(LOG_TAG_KNOX, "Failed to send MSG_READY_FOR_CONNECTION", e)
+            stopSession("Failed to send MSG_READY_FOR_CONNECTION: ${e.message}")
+        }
+    }
+
+    // ========================================================================
+    // Step 6: Handle MSG_READY_FOR_CONNECTION reply — session READY
+    // ========================================================================
+
+    private fun handleReadyForConnectionReply(msg: Message) {
+      Log.i(LOG_TAG_KNOX, "step 6 with $msg")
+        if (stopped) return
+
+        if (msg.arg1 < 0) {
+            Log.e(LOG_TAG_KNOX, "MSG_READY_FOR_CONNECTION error: code=${msg.arg1}")
+            stopSession("MSG_READY_FOR_CONNECTION rejected: code=${msg.arg1}")
+            return
+        }
+
+        val json = msg.data?.getString(KEY_SESSION_INFO)
+        if (json.isNullOrBlank()) {
+            Log.e(LOG_TAG_KNOX, "session_info is null or blank")
+            stopSession("No active session (session_info is null)")
+            return
+        }
+
+        val payload = try {
+            parseSessionPayload(json)
+        } catch (e: Exception) {
+            Log.e(LOG_TAG_KNOX, "Failed to parse session_info JSON", e)
+            stopSession("Failed to parse session_info: ${e.message}")
+            return
+        }
+
+        if (payload.remoteSessionId != remoteSessionId || payload.status != SessionState.READY) {
+            Log.e(LOG_TAG_KNOX, "Session id mismatch: expected=$remoteSessionId, " +
+                    "got=${payload.remoteSessionId}" +
+                    ", or session is not READY: ${payload.status}")
+            stopSession("Session id mismatch or session not ready")
+            return
+        }
+
+        Log.i(LOG_TAG_KNOX, "Session is now Ready to receive a connection")
+        isSessionReady = true
+        pendingStartAfterPrepare = false
+
+        service.onSessionReadyForConnection()
+    }
+
+    // ========================================================================
+    // Step 7: Send MSG_START_SESSION
+    // ========================================================================
+ 
+    private fun sendStartSessionMessage() {
+      Log.i(LOG_TAG_KNOX, "step 7")
+        if (stopped) return
+        val sessionId = remoteSessionId ?: return
+        val msg = Message.obtain(null, MSG_START_SESSION).apply {
+            replyTo = replyMessenger
+            data = Bundle().apply {
+                putString(KEY_REMOTE_SESSION_ID, sessionId)
             }
         }
         try {
@@ -428,36 +513,55 @@ class KnoxCapturer(
     }
 
     // ========================================================================
-    // TODO: MSG_START_SESSION should be READY_FOR_CONNECTION
-    // Step 6: Handle MSG_START_SESSION reply — session RUNNING
+    // Step 8: Handle MSG_START_SESSION reply 
     // ========================================================================
 
     private fun handleStartSessionReply(msg: Message) {
+      Log.i(LOG_TAG_KNOX, "step 8 with $msg")
         if (stopped) return
 
         if (msg.arg1 < 0) {
-            Log.e(LOG_TAG_KNOX, "MSG_START_SESSION error: code=${msg.arg1}")
-            stopSession("MSG_START_SESSION rejected: code=${msg.arg1}")
+            Log.e(LOG_TAG_KNOX, "MSG_READY_FOR_CONNECTION error: code=${msg.arg1}")
+            stopSession("MSG_READY_FOR_CONNECTION rejected: code=${msg.arg1}")
             return
         }
 
-        Log.i(LOG_TAG_KNOX, "Session is now RUNNING")
-        isSessionRunning = true
-        pendingStartAfterPrepare = false
+        val json = msg.data?.getString(KEY_SESSION_INFO)
+        if (json.isNullOrBlank()) {
+            Log.e(LOG_TAG_KNOX, "session_info is null or blank")
+            stopSession("No active session (session_info is null)")
+            return
+        }
 
-        service.onSessionReady()
+        val payload = try {
+            parseSessionPayload(json)
+        } catch (e: Exception) {
+            Log.e(LOG_TAG_KNOX, "Failed to parse session_info JSON", e)
+            stopSession("Failed to parse session_info: ${e.message}")
+            return
+        }
+
+        if (payload.remoteSessionId != remoteSessionId || payload.status != SessionState.RUNNING) {
+            Log.e(LOG_TAG_KNOX, "Session id mismatch: expected=$remoteSessionId, " +
+                    "got=${payload.remoteSessionId}" +
+                    ", or session is not RUNNING: ${payload.status}")
+            stopSession("Session id mismatch or session not running")
+            return
+        }
+
+        isSessionRunning = true
     }
 
     // ========================================================================
     // Capturer operations
     // ========================================================================
-    fun isBound(): Boolean = isCaptureBound && captureService != null
 
     fun startCapture() {
-      //TODO: move this to add_connection signal
       val capServ = captureService
       if (capServ != null) {
           capServ.registerFrameCallback(knoxFrameCallback)
+          FFI.setFrameRawEnable("video", true)
+          sendStartSessionMessage()
       }
     }
 
@@ -557,7 +661,7 @@ class KnoxCapturer(
         val obj = JSONObject(json)
         return SessionPayload(
             remoteSessionId = obj.getString("remoteSessionId"),
-            status = obj.optString("status", ""),
+            status = SessionState(obj.optString("status", "")),
             url = obj.optString("url", null),
             key = obj.optString("key", null),
             isUserConsentRequired = obj.optBoolean("isUserConsentRequired", true)
@@ -583,6 +687,7 @@ class KnoxCapturer(
             val capturer = capturerRef.get() ?: return
             when (msg.what) {
                 MSG_GET_SESSION_INFO -> capturer.handleGetSessionInfoReply(msg)
+                MSG_READY_FOR_CONNECTION -> capturer.handleReadyForConnectionReply(msg)
                 MSG_START_SESSION -> capturer.handleStartSessionReply(msg)
             }
         }

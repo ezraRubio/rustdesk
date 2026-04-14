@@ -42,7 +42,7 @@ import com.carriez.flutter_hbb.SCREEN_INFO
  *   2. Fort CT (unattended): Fort CT → DispatcherActivity → KnoxService → KnoxCapturer
  *
  * TODO:
- * - what happens on concurrent session?
+ * - what happens on concurrent session? rejected silently and log
  * - should there be support for half_scale signal from rust?
  * - add_connection should trigger the START_SESSION message for fct
  */
@@ -105,10 +105,10 @@ class KnoxService : Service() {
                     if (!isStart) {
                         _isStart = true
                         val capturer = knoxCapturer
-                        if (capturer != null) {
+                        if (capturer != null && isReady) {
                           capturer.startCapture()
+                          Log.w(LOG_TAG, "client connected")
                         }
-                        Log.w(LOG_TAG, "client connected")
                     }
                 } catch (e: JSONException) {
                     e.printStackTrace()
@@ -144,7 +144,7 @@ class KnoxService : Service() {
         private const val NOTIFICATION_ID = 1002
 
         @Volatile
-        var isActive: Boolean = false
+        var isReady: Boolean = false
             private set
     }
 
@@ -239,32 +239,21 @@ class KnoxService : Service() {
     // Session callbacks — called by KnoxCapturer
     // ========================================================================
 
-    /**
-     * Called by KnoxCapturer when session handshake completes and capture is
-     * initialized. Frames will start flowing.
-     */
-    fun onSessionReady() {
-        Log.i(LOG_TAG, "Session ready — enabling video pipeline")
-        isActive = true
-        FFI.setFrameRawEnable("video", true)
+    fun onSessionReadyForConnection() {
+        //This allows KnoxService to act on rust's add_connection signal
+        Log.i(LOG_TAG, "Session ready")
+        isReady = true
     }
 
-    /**
-     * Called by KnoxCapturer when session ends (external disconnect, error, etc.).
-     * Tears down service.
-     */
     fun onSessionEnded(reason: String) {
         Log.w(LOG_TAG, "Session ended: $reason")
-        isActive = false
+        isReady = false
         FFI.setFrameRawEnable("video", false)
         knoxCapturer = null
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
-    /**
-     * Stop current session and shut down service.
-     */
     fun stopSession(reason: String) {
         val capturer = knoxCapturer
         if (capturer != null) {
@@ -279,7 +268,7 @@ class KnoxService : Service() {
     // ========================================================================
     // Notification
     //
-    // needed so this service can remain in the foreground 
+    // needed so this service can remain in the foreground
     // ========================================================================
 
     private fun createNotificationChannel() {
