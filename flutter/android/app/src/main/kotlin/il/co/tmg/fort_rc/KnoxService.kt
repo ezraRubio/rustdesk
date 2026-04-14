@@ -33,6 +33,9 @@ import android.app.PendingIntent.FLAG_UPDATE_CURRENT
 import com.carriez.flutter_hbb.LEFT_DOWN
 import com.carriez.flutter_hbb.R
 import com.carriez.flutter_hbb.SCREEN_INFO
+import com.carriez.flutter_hbb.MainActivity
+import android.content.ComponentName
+import android.content.pm.PackageManager
 
 /**
  * KnoxService is a foreground service that owns the full fort rc session lifecycle.
@@ -192,6 +195,13 @@ class KnoxService : Service() {
             buildNotification("Connecting..."),
             ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
         )
+
+        // Disable MainActivity
+        packageManager.setComponentEnabledSetting(
+            ComponentName(this, MainActivity::class.java),
+            PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+            PackageManager.DONT_KILL_APP
+        )
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -232,6 +242,13 @@ class KnoxService : Service() {
         stopSession("KnoxService destroyed")
         knoxCapturer = null
         serviceLooper?.quitSafely()
+
+        // Reenable MainActivity
+        packageManager.setComponentEnabledSetting(
+            ComponentName(this, MainActivity::class.java),
+            PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+            PackageManager.DONT_KILL_APP
+        )
         super.onDestroy()
     }
 
