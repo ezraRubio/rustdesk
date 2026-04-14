@@ -665,7 +665,7 @@ class KnoxCapturer(
         val obj = JSONObject(json)
         return SessionPayload(
             remoteSessionId = obj.getString("remoteSessionId"),
-            status = SessionState.valueOf(obj.optString("status", "")),
+            status = SessionState.entries.first { it.status == obj.getString("status") },
             url = obj.optString("url", null),
             key = obj.optString("key", null),
             isUserConsentRequired = obj.optBoolean("isUserConsentRequired", true)
