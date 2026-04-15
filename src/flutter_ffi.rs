@@ -2994,7 +2994,7 @@ pub mod server_side {
         app_dir: JString,
         custom_client_config: JString,
     ) {
-        log::debug!("startServer from jvm")
+        log::debug!("startServer from jvm");
         let mut env = env;
         if let Ok(app_dir) = env.get_string(&app_dir) {
             *config::APP_DIR.write().unwrap() = app_dir.into();
