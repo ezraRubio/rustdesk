@@ -3086,7 +3086,7 @@ pub mod server_side {
 
     #[no_mangle]
     pub unsafe extern "system" fn Java_ffi_FFI_getOnlineState(
-        _env: JNIEnv,
+        env: JNIEnv,
         _class: JClass,
     ) -> jstring {
         let mut env = env;
