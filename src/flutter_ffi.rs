@@ -3002,6 +3002,7 @@ pub mod server_side {
         if let Ok(custom_client_config) = env.get_string(&custom_client_config) {
             if !custom_client_config.is_empty() {
                 let custom_client_config: String = custom_client_config.into();
+                log::debug!(custom_client_config)
                 crate::read_custom_client(&custom_client_config);
             }
         }
@@ -3056,6 +3057,14 @@ pub mod server_side {
     }
 
     #[no_mangle]
+    pub unsafe extern "system" fn Java_ffi_FFI_isServiceClipboardEnabled(
+        env: JNIEnv,
+        _class: JClass,
+    ) -> jboolean {
+        jboolean::from(crate::server::is_clipboard_service_ok())
+    }
+
+    #[no_mangle]
     pub unsafe extern "system" fn Java_ffi_FFI_getMyId(
         env: JNIEnv,
         _class: JClass,
@@ -3067,19 +3076,19 @@ pub mod server_side {
 
     #[no_mangle]
     pub unsafe extern "system" fn Java_ffi_FFI_getTemporaryPassword(
-    env: JNIEnv,
-    _class: JClass,
+        env: JNIEnv,
+        _class: JClass,
     ) -> jstring {
-    let mut env = env;
-    let password = password_security::temporary_password();
+        let mut env = env;
+        let password = password_security::temporary_password();
         return env.new_string(password).unwrap_or_default().into_raw();
     }
 
     #[no_mangle]
-    pub unsafe extern "system" fn Java_ffi_FFI_isServiceClipboardEnabled(
-        env: JNIEnv,
+    pub unsafe extern "system" fn Java_ffi_FFI_getOnlineState(
+        _env: JNIEnv,
         _class: JClass,
-    ) -> jboolean {
-        jboolean::from(crate::server::is_clipboard_service_ok())
+    ) -> jint {
+        hbb_common::config::Config::get_online_state() as jint
     }
 }

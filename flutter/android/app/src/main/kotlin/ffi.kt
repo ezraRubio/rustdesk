@@ -28,4 +28,5 @@ object FFI {
     external fun isServiceClipboardEnabled(): Boolean
     external fun getMyId(): String
     external fun getTemporaryPassword(): String
+    external fun getOnlineState(): String
 }

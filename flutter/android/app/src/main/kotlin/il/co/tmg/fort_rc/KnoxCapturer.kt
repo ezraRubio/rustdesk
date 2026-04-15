@@ -344,9 +344,10 @@ class KnoxCapturer(
 
         // Now that we have the servers' creds, we can start it:
         val appConfig = buildAppConfig(payload)
+        Log.d(LOG_TAG_KNOX, "injecting config: $appConfig")
         FFI.startServer("", appConfig)
         pendingStartAfterPrepare = true
-        bindCaptureService()
+        waitForServerOnline(bindCaptureService())
     }
 
     // ========================================================================
@@ -685,7 +686,8 @@ class KnoxCapturer(
         }
     }
 
-    private fun buildAppConfig(payload: SessionState): String {
+    private fun buildAppConfig(payload: SessionPayload): String {
+        Log.d(LOG_TAG_KNOX, "payload: url ${payload.url}, key ${payload.key}")
         val config = JSONObject()
         val defaultSettings = JSONObject()
 
@@ -694,9 +696,30 @@ class KnoxCapturer(
         defaultSettings.put("custom-rendezvous-server", payload.url)
         defaultSettings.put("key", payload.key)
         config.put("default-settings", defaultSettings)
+        Log.d(LOG_TAG_KNOX, "config json: $config")
         return config.toString()
     }
 
+    private val MAX_WAIT_MS = 15_000L
+    private val POLL_INTERVAL_MS = 500L
+    private fun waitForServerOnline(onReady: () -> Unit) {
+         val startTime = System.currentTimeMillis()
+         val poller = object : Runnable {
+            override fun run() {
+                  if (stopped) return
+                  val state = FFI.getOnlineState()
+                  if (state >0) {
+                        Log.i(LOG_TAG_KNOX,"Serveronline (state=$state)")
+                        onReady()
+                  } else if (System.currentTimeMillis() - startTime > MAX_WAIT_MS) {
+                        stopSession("Timeout waiting for server registration")
+                  } else {
+                        serviceHandler.postDelayed(this, POLL_INTERVAL_MS)
+                  }
+            }
+        }
+        serviceHandler.post(poller)
+  }
     // ========================================================================
     // Reply handler (WeakReference pattern)
     // ========================================================================
