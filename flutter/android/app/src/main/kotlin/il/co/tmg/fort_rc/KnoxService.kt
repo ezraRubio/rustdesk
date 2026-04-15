@@ -186,7 +186,6 @@ class KnoxService : Service() {
 
         // Initialize FFI/Rust
         FFI.init(this)
-        FFI.startServer("", "")
 
         // Go foreground
         createNotificationChannel()

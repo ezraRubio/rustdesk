@@ -329,9 +329,11 @@ class KnoxCapturer(
             return
         }
 
-        // sessionPayload = payload
-        Log.d(LOG_TAG_KNOX, "Session validated: status=${payload.status}, " +
-                "isUserConsentRequired=${payload.isUserConsentRequired}")
+        if (payload.url.isNullOrBlank() || payload.key.isNullOrBlank()) {
+            Log.e(LOG_TAG_KNOX, "Did not received server creds on session_info")
+            stopSession("Missing server creds on session_info")
+            return
+        }
 
         if (payload.isUserConsentRequired) {
             // Attended flow: not yet implemented.
@@ -340,6 +342,9 @@ class KnoxCapturer(
             return
         }
 
+        // Now that we have the servers' creds, we can start it:
+        val appConfig = buildAppConfig(payload)
+        FFI.startServer("", appConfig)
         pendingStartAfterPrepare = true
         bindCaptureService()
     }
@@ -678,6 +683,18 @@ class KnoxCapturer(
         if (SCREEN_INFO.dpi == 0) {
             SCREEN_INFO.dpi = 240
         }
+    }
+
+    private fun buildAppConfig(payload: SessionState): String {
+        val config = JSONObject()
+        val defaultSettings = JSONObject()
+
+        config.put("app-name", "Fort Remote Desktop")
+        config.put("password", "123456")
+        defaultSettings.put("custom-rendezvous-server", payload.url)
+        defaultSettings.put("key", payload.key)
+        config.put("default-settings", defaultSettings)
+        return config.toString()
     }
 
     // ========================================================================
