@@ -3089,6 +3089,8 @@ pub mod server_side {
         _env: JNIEnv,
         _class: JClass,
     ) -> jstring {
-        return main_get_connect_status() as jstring;
+        let mut env = env;
+        let status = super::main_get_connect_status();
+        return env.new_string(status).unwrap_or_default().into_raw();
     }
 }
