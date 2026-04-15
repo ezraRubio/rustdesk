@@ -3089,6 +3089,6 @@ pub mod server_side {
         _env: JNIEnv,
         _class: JClass,
     ) -> jint {
-        hbb_common::config::Config::get_online_state() as jint
+        return main_get_connect_status() as jint;
     }
 }
