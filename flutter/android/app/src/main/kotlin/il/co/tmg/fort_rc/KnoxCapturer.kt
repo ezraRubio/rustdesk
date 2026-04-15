@@ -708,7 +708,8 @@ class KnoxCapturer(
             override fun run() {
                   if (stopped) return
                   val state = FFI.getOnlineState()
-                  if (state >0) {
+                  Log.d(LOG_TAG_KNOX, "polling current online state: $state")
+                  if (state.toInt() > 0) {
                         Log.i(LOG_TAG_KNOX,"Serveronline (state=$state)")
                         onReady()
                   } else if (System.currentTimeMillis() - startTime > MAX_WAIT_MS) {
