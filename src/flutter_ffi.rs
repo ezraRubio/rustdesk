@@ -3093,4 +3093,17 @@ pub mod server_side {
         let status = super::main_get_connect_status();
         return env.new_string(status).unwrap_or_default().into_raw();
     }
+
+    #[no_mangle]
+    pub unsafe extern "system" fn Java_ffi_FFI_setOption(
+        env: JNIEnv,
+        _class: JClass,
+        key: String,
+        value: String,
+    ) {
+        let mut env = env;
+        if let (Ok(k), Ok(v)) = (env.get_string(&key), env.get_string(&value)) {
+            config::Config::set_option(k.into(), v.into());
+        }
+    }
 }

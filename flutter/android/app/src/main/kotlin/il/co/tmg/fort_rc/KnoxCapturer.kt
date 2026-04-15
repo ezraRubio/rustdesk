@@ -343,11 +343,12 @@ class KnoxCapturer(
         }
 
         // Now that we have the servers' creds, we can start it:
-        val appConfig = buildAppConfig(payload)
-        Log.d(LOG_TAG_KNOX, "injecting config: $appConfig")
-        FFI.startServer("", appConfig)
+        // val appConfig = buildAppConfig(payload)
+        FFI.setOption("custom-rendezvous-server", payload.url!!)
+        FFI.setOption("key", payload.key!!)
+        FFI.startServer("", "")
         pendingStartAfterPrepare = true
-        waitForServerOnline(bindCaptureService())
+        waitForServerOnline(::bindCaptureService)
     }
 
     // ========================================================================
@@ -708,8 +709,13 @@ class KnoxCapturer(
             override fun run() {
                   if (stopped) return
                   val state = FFI.getOnlineState()
-                  Log.d(LOG_TAG_KNOX, "polling current online state: $state")
-                  if (state.toInt() > 0) {
+                  val status = try {
+                    JSONObject(state).getInt("status_num")
+                  } catch (e: Exception) {
+                    0
+                  }
+                  Log.d(LOG_TAG_KNOX, "polling current online status: $status")
+                  if (status > 0) {
                         Log.i(LOG_TAG_KNOX,"Serveronline (state=$state)")
                         onReady()
                   } else if (System.currentTimeMillis() - startTime > MAX_WAIT_MS) {
@@ -720,7 +726,8 @@ class KnoxCapturer(
             }
         }
         serviceHandler.post(poller)
-  }
+    }
+
     // ========================================================================
     // Reply handler (WeakReference pattern)
     // ========================================================================

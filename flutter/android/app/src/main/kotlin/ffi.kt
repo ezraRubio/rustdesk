@@ -29,4 +29,5 @@ object FFI {
     external fun getMyId(): String
     external fun getTemporaryPassword(): String
     external fun getOnlineState(): String
+    external fun setOption(key: String, value: String)
 }
