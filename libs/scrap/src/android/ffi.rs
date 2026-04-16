@@ -488,7 +488,7 @@ pub extern "C" fn JNI_OnLoad(vm: jni::JavaVM, res: *mut std::os::raw::c_void) ->
             .with_max_level(log::LevelFilter::Debug) // limit log level
             .with_tag("RUST"), // logs will show under mytag tag
     );
-    log::info!("OnLoad called, logger initialized")
+    log::info!("OnLoad called, logger initialized");
     if let Ok(env) = vm.get_env() {
         let vm = vm.get_java_vm_pointer() as *mut std::os::raw::c_void;
         init_ndk_context(vm, res);
