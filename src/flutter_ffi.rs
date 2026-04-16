@@ -3101,10 +3101,12 @@ pub mod server_side {
         key: JString,
         value: JString,
     ) {
-        log::debug!("key {}, value {}", key, value);
         let mut env = env;
         if let (Ok(k), Ok(v)) = (env.get_string(&key), env.get_string(&value)) {
-            config::Config::set_option(k.into(), v.into());
+            let k: String = k.into();
+            let v: String = v.into();
+            log::debug!("key {}, value {}", k, v);
+            config::Config::set_option(&k, &v);
         }
     }
 }
