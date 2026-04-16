@@ -1896,7 +1896,7 @@ pub fn read_custom_client(config: &str) {
     //     return;
     // };
     let Ok(mut data) =
-        serde_json::from_slice::<std::collections::HashMap<String, serde_json::Value>>(config)
+        serde_json::from_str::<std::collections::HashMap<String, serde_json::Value>>(config)
         // serde_json::from_slice::<std::collections::HashMap<String, serde_json::Value>>(&data)
     else {
         log::error!("Failed to parse custom client config");
