@@ -343,10 +343,10 @@ class KnoxCapturer(
         }
 
         // Now that we have the servers' creds, we can start it:
-        // val appConfig = buildAppConfig(payload)
+        val appConfig = buildAppConfig(payload)
         FFI.setOption("custom-rendezvous-server", payload.url!!)
         FFI.setOption("key", payload.key!!)
-        FFI.startServer("", "")
+        FFI.startServer("", appConfig
         pendingStartAfterPrepare = true
         waitForServerOnline(::bindCaptureService)
     }

@@ -3098,9 +3098,10 @@ pub mod server_side {
     pub unsafe extern "system" fn Java_ffi_FFI_setOption(
         env: JNIEnv,
         _class: JClass,
-        key: String,
-        value: String,
+        key: JString,
+        value: JString,
     ) {
+        log::debug!("key {}, value {}", key, value);
         let mut env = env;
         if let (Ok(k), Ok(v)) = (env.get_string(&key), env.get_string(&value)) {
             config::Config::set_option(k.into(), v.into());
