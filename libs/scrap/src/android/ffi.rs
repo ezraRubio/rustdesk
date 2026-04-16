@@ -482,12 +482,13 @@ fn try_init_rustls_platform_verifier(env: &mut JNIEnv, context_jobject: *mut c_v
 // https://cjycode.com/flutter_rust_bridge/guides/how-to/ndk-init
 #[no_mangle]
 pub extern "C" fn JNI_OnLoad(vm: jni::JavaVM, res: *mut std::os::raw::c_void) -> jni::sys::jint {
-    #[cfg(debug_assertions)]
+    // #[cfg(debug_assertions)]
     android_logger::init_once(
         android_logger::Config::default()
             .with_max_level(log::LevelFilter::Debug) // limit log level
             .with_tag("RUST"), // logs will show under mytag tag
     );
+    log::info!("OnLoad called, logger initialized")
     if let Ok(env) = vm.get_env() {
         let vm = vm.get_java_vm_pointer() as *mut std::os::raw::c_void;
         init_ndk_context(vm, res);

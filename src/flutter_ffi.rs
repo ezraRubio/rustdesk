@@ -3106,7 +3106,7 @@ pub mod server_side {
             let k: String = k.into();
             let v: String = v.into();
             log::debug!("key {}, value {}", k, v);
-            config::Config::set_option(&k, &v);
+            config::Config::set_option(k, v);
         }
     }
 }
