@@ -20,10 +20,7 @@ class DispatcherActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         val sessionId = intent.getStringExtra("remote_session_id")
-        Log.d(LOG_TAG, "onCreate: remoteSessionId=$sessionId")
-
         if (sessionId.isNullOrBlank()) {
             Log.e(LOG_TAG, "No remote_session_id in intent, finishing")
             finish()
@@ -41,7 +38,6 @@ class DispatcherActivity : Activity() {
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         val newSessionId = intent?.getStringExtra("remote_session_id")
-        Log.w(LOG_TAG, "onNewIntent: new session $newSessionId — dispatching to KnoxService")
 
         if (!newSessionId.isNullOrBlank()) {
             val serviceIntent = Intent(this, KnoxService::class.java).apply {

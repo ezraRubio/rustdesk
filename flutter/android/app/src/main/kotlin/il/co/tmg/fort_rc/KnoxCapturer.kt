@@ -212,7 +212,6 @@ class KnoxCapturer(
     // ========================================================================
 
     fun startSession(sessionId: String) {
-        Log.i(LOG_TAG_KNOX, "startSession: sessionId=$sessionId")
         stopped = false
         remoteSessionId = sessionId
         bindControlService()
@@ -220,7 +219,6 @@ class KnoxCapturer(
 
     fun stopSession(reason: String) {
         if (stopped) return
-        Log.i(LOG_TAG_KNOX, "stopSession: $reason")
         stopped = true
         isSessionReady = false
 
@@ -244,7 +242,6 @@ class KnoxCapturer(
     // ========================================================================
 
     private fun bindControlService() {
-      Log.i(LOG_TAG_KNOX, "step 1")
         if (stopped) return
         if (isControlBound) {
             requestSessionInfo()
@@ -269,12 +266,10 @@ class KnoxCapturer(
     // ========================================================================
 
     private fun requestSessionInfo() {
-      Log.i(LOG_TAG_KNOX, "step 2")
         if (stopped) return
         val sessionId = remoteSessionId ?: return
         val messenger = controlMessenger ?: return
 
-        Log.d(LOG_TAG_KNOX, "Sending MSG_GET_SESSION_INFO for session=$sessionId")
         val msg = Message.obtain(null, MSG_GET_SESSION_INFO).apply {
             replyTo = replyMessenger
             data = Bundle().apply {
@@ -291,12 +286,10 @@ class KnoxCapturer(
 
     // ========================================================================
     // Step 3: Validate session info reply
-    // TODO: must inject the host+key from session_info, into the current apps config
     //
     // ========================================================================
 
     private fun handleGetSessionInfoReply(msg: Message) {
-      Log.i(LOG_TAG_KNOX, "step 3 with $msg")
         if (stopped) return
 
         if (msg.arg1 < 0) {
@@ -311,8 +304,6 @@ class KnoxCapturer(
             stopSession("No active session (session_info is null)")
             return
         }
-
-        Log.d(LOG_TAG_KNOX, "Received session_info: $json")
 
         val payload = try {
             parseSessionPayload(json)
@@ -411,9 +402,6 @@ class KnoxCapturer(
 
     // ========================================================================
     // Step 5: Send MSG_READY_FOR_CONNECTION
-    // TODO: token == tmpPasswd
-    // so who needs to generate it? rust or me?
-    //
     // ========================================================================
 
     private fun sendReadyForConnection() {
@@ -427,22 +415,16 @@ class KnoxCapturer(
 
         val remoteId = FFI.getMyId()
         val password = FFI.getTemporaryPassword()
-        if (remoteId.isBlank()) {
-            Log.w(LOG_TAG_KNOX, "Device remote ID blank, using fallback UUID")
-        }
-        generatedRemoteId = remoteId.ifBlank { "knox-${java.util.UUID.randomUUID()}" }
-        generatedToken = generateSecureToken()
 
-        Log.d(LOG_TAG_KNOX, "Sending MSG_READY_FOR_CONNECTION: generatedRemoteId=$generatedRemoteId")
-        Log.d(LOG_TAG_KNOX, "https://fortdesk.lan/#/connect/$remoteId?password=$password")
         val msg = Message.obtain(null, MSG_READY_FOR_CONNECTION).apply {
             replyTo = replyMessenger
             data = Bundle().apply {
                 putString(KEY_REMOTE_SESSION_ID, sessionId)
-                putString(KEY_REMOTE_ID, generatedRemoteId)
-                putString(KEY_TOKEN, generatedToken)
+                putString(KEY_REMOTE_ID, remoteId)
+                putString(KEY_TOKEN, password)
             }
         }
+
         try {
             messenger.send(msg)
         } catch (e: RemoteException) {
@@ -488,7 +470,6 @@ class KnoxCapturer(
             return
         }
 
-        Log.i(LOG_TAG_KNOX, "Session is now Ready to receive a connection")
         isSessionReady = true
         pendingStartAfterPrepare = false
 
@@ -500,7 +481,6 @@ class KnoxCapturer(
     // ========================================================================
  
     private fun sendStartSessionMessage() {
-      Log.i(LOG_TAG_KNOX, "step 7")
         if (stopped) return
         val sessionId = remoteSessionId ?: return
         val messenger = controlMessenger ?: run {
@@ -526,7 +506,6 @@ class KnoxCapturer(
     // ========================================================================
 
     private fun handleStartSessionReply(msg: Message) {
-      Log.i(LOG_TAG_KNOX, "step 8 with $msg")
         if (stopped) return
 
         if (msg.arg1 < 0) {
@@ -686,16 +665,15 @@ class KnoxCapturer(
     }
 
     private fun buildAppConfig(payload: SessionPayload): String {
-        Log.d(LOG_TAG_KNOX, "payload: url ${payload.url}, key ${payload.key}")
+        val serverHost = payload.url
+        val serverKey = payload.key
         val config = JSONObject()
         val defaultSettings = JSONObject()
 
         config.put("app-name", "Fort Remote Desktop")
-        config.put("password", "123456")
-        defaultSettings.put("custom-rendezvous-server", payload.url)
-        defaultSettings.put("key", payload.key)
+        defaultSettings.put("custom-rendezvous-server", serverHost)
+        defaultSettings.put("key", serverKey)
         config.put("default-settings", defaultSettings)
-        Log.d(LOG_TAG_KNOX, "config json: $config")
         return config.toString()
     }
 

@@ -43,11 +43,6 @@ import android.content.pm.PackageManager
  * It is instead of MainService when unattended. As such:
  *   1. Normal (attended): User → MainActivity → MainService
  *   2. Fort CT (unattended): Fort CT → DispatcherActivity → KnoxService → KnoxCapturer
- *
- * TODO:
- * - what happens on concurrent session? rejected silently and log
- * - should there be support for half_scale signal from rust?
- * - add_connection should trigger the START_SESSION message for fct
  */
 class KnoxService : Service() {
 
@@ -99,7 +94,6 @@ class KnoxService : Service() {
     fun rustSetByName(name: String, arg1: String, arg2: String) {
         when (name) {
             "add_connection" -> {
-              //TODO: 3
                 try {
                     val jsonObject = JSONObject(arg1)
                     val id = jsonObject["id"] as Int
@@ -128,7 +122,6 @@ class KnoxService : Service() {
                 // val halfScale = arg1.toBoolean()
                 // if (isHalfScale != halfScale) {
                 //     isHalfScale = halfScale
-                //     //TODO: 2
                 // }
             }
             else -> { }
@@ -215,7 +208,6 @@ class KnoxService : Service() {
 
                 if (knoxCapturer != null) {
                     Log.w(LOG_TAG, "Session already active, ignoring new request")
-                    // TODO: 1
                     return START_STICKY
                 }
 
