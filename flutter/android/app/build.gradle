@@ -10,7 +10,10 @@ plugins {
 }
 
 def keystoreProperties = new Properties()
-def keystorePropertiesFile = rootProject.file('sign.properties')
+
+def protectedPropertiesPath = System.getenv("PROTECTED_PROPERTIES_PATH") ?: "../"
+
+def keystorePropertiesFile = new File(protectedPropertiesPath +'sign.properties')
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
@@ -63,7 +66,7 @@ repositories {
     maven {
         url = findRustlsPlatformVerifierMavenDir()
         metadataSources.artifact()
-    }
+    }.release
 }
 
 protobuf {
