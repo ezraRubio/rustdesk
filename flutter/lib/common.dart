@@ -2365,6 +2365,19 @@ List<String>? urlLinkToCmdArgs(Uri uri) {
     id = uri.path.substring("/new/".length);
   } else if (uri.authority == "config") {
     if (isAndroid || isIOS) {
+      final allowDeepLinkServerSettings =
+          bind.mainGetBuildinOption(key: kOptionAllowDeepLinkServerSettings) ==
+              'Y';
+      if (!allowDeepLinkServerSettings) {
+        debugPrint(
+            "Ignore rustdesk://config because $kOptionAllowDeepLinkServerSettings is not enabled.");
+        // Keep the user-facing error generic; detailed rejection reason is in debug logs.
+        // Delay toast to avoid missing overlay during cold-start deeplink handling.
+        Timer(Duration(seconds: 1), () {
+          showToast(translate('Failed'));
+        });
+        return null;
+      }
       final config = uri.path.substring("/".length);
       // add a timer to make showToast work
       Timer(Duration(seconds: 1), () {
@@ -2374,11 +2387,24 @@ List<String>? urlLinkToCmdArgs(Uri uri) {
     return null;
   } else if (uri.authority == "password") {
     if (isAndroid || isIOS) {
+      final allowDeepLinkPassword =
+          bind.mainGetBuildinOption(key: kOptionAllowDeepLinkPassword) == 'Y';
+      if (!allowDeepLinkPassword) {
+        debugPrint(
+            "Ignore rustdesk://password because $kOptionAllowDeepLinkPassword is not enabled.");
+        // Keep the user-facing error generic; detailed rejection reason is in debug logs.
+        // Delay toast to avoid missing overlay during cold-start deeplink handling.
+        Timer(Duration(seconds: 1), () {
+          showToast(translate('Failed'));
+        });
+        return null;
+      }
       final password = uri.path.substring("/".length);
       if (password.isNotEmpty) {
         Timer(Duration(seconds: 1), () async {
-          await bind.mainSetPermanentPassword(password: password);
-          showToast(translate('Successful'));
+          final ok =
+              await bind.mainSetPermanentPasswordWithResult(password: password);
+          showToast(translate(ok ? 'Successful' : 'Failed'));
         });
       }
     }
@@ -4117,4 +4143,44 @@ String mouseButtonsToPeer(int buttons) {
     default:
       return '';
   }
+}
+
+/// Build an avatar widget from an avatar URL or data URI string.
+/// Returns [fallback] if avatar is empty or cannot be decoded.
+/// [borderRadius] defaults to [size]/2 (circle).
+Widget? buildAvatarWidget({
+  required String avatar,
+  required double size,
+  double? borderRadius,
+  Widget? fallback,
+}) {
+  final trimmed = avatar.trim();
+  if (trimmed.isEmpty) return fallback;
+
+  ImageProvider? imageProvider;
+  if (trimmed.startsWith('data:image/')) {
+    final comma = trimmed.indexOf(',');
+    if (comma > 0) {
+      try {
+        imageProvider = MemoryImage(base64Decode(trimmed.substring(comma + 1)));
+      } catch (_) {}
+    }
+  } else if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    imageProvider = NetworkImage(trimmed);
+  }
+
+  if (imageProvider == null) return fallback;
+
+  final radius = borderRadius ?? size / 2;
+  return ClipRRect(
+    borderRadius: BorderRadius.circular(radius),
+    child: Image(
+      image: imageProvider,
+      width: size,
+      height: size,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) =>
+          fallback ?? SizedBox.shrink(),
+    ),
+  );
 }
