@@ -116,6 +116,7 @@ preflight_checks() {
     error "This script must be run from the rustdesk directory"
   fi
   info "Running from: $(pwd)"
+  info "PATH: $(PATH)"
 
   # Check required tools
   check_command rustc
