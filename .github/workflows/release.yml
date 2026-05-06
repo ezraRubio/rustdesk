@@ -15,8 +15,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v6
+      with:
+        submodules: recursive
     - name: Setup execution flag for gradlew
-      run: chmod +x gradlew
+      run: chmod +x android.sh
     - name: Obtain solution name for folders/URL from repository name
       run: |
         SOLUTION_NAME=${GITHUB_REPOSITORY#*/}
