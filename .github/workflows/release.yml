@@ -6,7 +6,7 @@ on:
     branches:
       - master
     paths:
-      - 'version.properties'
+      - 'flutter/android/version.properties'
 
 jobs:
   build:
