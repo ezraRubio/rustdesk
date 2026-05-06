@@ -578,6 +578,22 @@ main() {
     esac
   done
 
+  #ONE TIME
+  install_dependencies
+  cd ..
+  #flutter
+  wget https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.24.5-stable.tar.xz
+  #rust
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+  #vcpkg
+  git clone --recurse-submodules https://github.com/microsoft/vcpkg
+  cd vcpkg
+  git checkout 2023.10.19
+  cd ..
+  vcpkg/bootstrap-vcpkg.sh
+  export VCPKG_ROOT=$PWD/vcpkg
+  vcpkg/vcpkg install --x-install-root="$VCPKG_ROOT/installed"
+
   configure_arch
   preflight_checks
 
