@@ -133,10 +133,6 @@ class MainActivity : FlutterActivity() {
                     Intent(activity, MainService::class.java).also {
                         bindService(it, serviceConnection, Context.BIND_AUTO_CREATE)
                     }
-                    if (MainService.isReady) {
-                        result.success(false)
-                        return@setMethodCallHandler
-                    }
                     requestMediaProjection()
                     result.success(true)
                 }
@@ -193,7 +189,7 @@ class MainActivity : FlutterActivity() {
                     )
                     Companion.flutterMethodChannel?.invokeMethod(
                         "on_state_changed",
-                        mapOf("name" to "media", "value" to MainService.isReady.toString())
+                        mapOf("name" to "media", "value" to MainService.isReady .toString())
                     )
                     result.success(true)
                 }
@@ -401,7 +397,7 @@ class MainActivity : FlutterActivity() {
 
     override fun onStop() {
         super.onStop()
-        val disableFloatingWindow = FFI.getLocalOption("disable-floating-window") == "Y"
+        val disableFloatingWindow = true//FFI.getLocalOption("disable-floating-window") == "Y"
         if (!disableFloatingWindow && MainService.isReady) {
             startService(Intent(this, FloatingWindowService::class.java))
         }

@@ -82,7 +82,6 @@ impl FrameRaw {
             None
         } else {
             if self.last_update.elapsed() > self.timeout {
-                log::trace!("Failed to take {} raw,timeout!", self.name);
                 return None;
             }
             let slice = unsafe { std::slice::from_raw_parts(ptr, self.len) };

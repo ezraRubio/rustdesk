@@ -3,9 +3,10 @@ import android.view.KeyEvent
 import android.view.KeyCharacterMap
 import hbb.MessageOuterClass.KeyboardMode
 import hbb.MessageOuterClass.ControlKey
+import android.util.Log
 
 object KeyEventConverter {
-    fun toAndroidKeyEvent(keyEventProto: hbb.MessageOuterClass.KeyEvent): KeyEvent {
+    fun toAndroidKeyEvent(keyEventProto: hbb.MessageOuterClass.KeyEvent): Array<KeyEvent> {
         var chrValue = 0
         var modifiers = 0
 
@@ -15,7 +16,9 @@ object KeyEventConverter {
             if (keyboardMode == KeyboardMode.Map || keyboardMode == KeyboardMode.Translate) {
                 chrValue = keyEventProto.getChr()
             } else {
-                chrValue = convertUnicodeToKeyCode(keyEventProto.getChr() as Int)
+                //chrValue = convertUnicodeToKeyCode(keyEventProto.getChr() as Int)
+                val unicode = keyEventProto.getChr() as Int
+                return convertUnicodeToKeyEventsOnLegacy(unicode)
             }
         } else if (keyEventProto.hasControlKey()) {
             chrValue = convertControlKeyToKeyCode(keyEventProto.getControlKey())
@@ -37,7 +40,7 @@ object KeyEventConverter {
             action = KeyEvent.ACTION_UP
         }
 
-        return KeyEvent(0, 0, action, chrValue, 0, modifiers)
+        return arrayOf(KeyEvent(0, 0, action, chrValue, 0, modifiers))
     }
 
     private fun convertModifier(controlKey: hbb.MessageOuterClass.ControlKey): Int {
@@ -58,6 +61,11 @@ object KeyEventConverter {
     }
 
     private val tag = "KeyEventConverter"
+
+    private fun convertUnicodeToKeyEventsOnLegacy(unicode: Int): Array<KeyEvent> {
+        val charMap = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD)
+        return charMap.getEvents(charArrayOf(unicode.toChar()))
+    }
 
     private fun convertUnicodeToKeyCode(unicode: Int): Int {
         val charMap = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD)

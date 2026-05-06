@@ -3030,7 +3030,7 @@ pub fn session_get_common(
 
 #[cfg(target_os = "android")]
 pub mod server_side {
-    use hbb_common::{config, log};
+    use hbb_common::{config, log, password_security};
     use jni::{
         errors::{Error as JniError, Result as JniResult},
         objects::{JClass, JObject, JString},
@@ -3130,5 +3130,35 @@ pub mod server_side {
         _class: JClass,
     ) -> jboolean {
         jboolean::from(crate::server::is_clipboard_service_ok())
+    }
+
+    #[no_mangle]
+    pub unsafe extern "system" fn Java_ffi_FFI_getMyId(
+        env: JNIEnv,
+        _class: JClass,
+    ) -> jstring {
+        let mut env = env;
+        let id = config::Config::get_id();
+        return env.new_string(id).unwrap_or_default().into_raw();
+    }
+
+    #[no_mangle]
+    pub unsafe extern "system" fn Java_ffi_FFI_getTemporaryPassword(
+        env: JNIEnv,
+        _class: JClass,
+    ) -> jstring {
+        let mut env = env;
+        let password = password_security::temporary_password();
+        return env.new_string(password).unwrap_or_default().into_raw();
+    }
+
+    #[no_mangle]
+    pub unsafe extern "system" fn Java_ffi_FFI_getOnlineState(
+        env: JNIEnv,
+        _class: JClass,
+    ) -> jstring {
+        let mut env = env;
+        let status = super::main_get_connect_status();
+        return env.new_string(status).unwrap_or_default().into_raw();
     }
 }
