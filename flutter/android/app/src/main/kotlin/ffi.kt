@@ -27,4 +27,7 @@ object FFI {
     external fun getBuildinOption(key: String): String
     external fun onClipboardUpdate(clips: ByteBuffer)
     external fun isServiceClipboardEnabled(): Boolean
+    external fun getMyId(): String
+    external fun getTemporaryPassword(): String
+    external fun getOnlineState(): String
 }

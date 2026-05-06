@@ -721,6 +721,12 @@ fn run(vs: VideoService) -> ResultType<()> {
             Ok(frame) => {
                 repeat_encode_counter = 0;
                 if frame.valid() {
+                    match &frame {
+                        scrap::Frame::PixelBuffer(f) => {
+                        }
+                        scrap::Frame::Texture(_) => {
+                        }
+                    }
                     let screenshot = SCREENSHOTS.lock().unwrap().remove(&display_idx);
                     if let Some(mut screenshot) = screenshot {
                         let restore_vram = screenshot.restore_vram;
@@ -1138,6 +1144,10 @@ fn handle_one_frame(
     width: usize,
     height: usize,
 ) -> ResultType<HashSet<i32>> {
+    let frame_desc = match &frame {
+        EncodeInput::YUV(y) => format!("EncodeInput::YUV len={}", y.len()),
+        EncodeInput::Texture(_) => "EncodeInput::Texture".to_owned(),
+    };
     sp.snapshot(|sps| {
         // so that new sub and old sub share the same encoder after switch
         if sps.has_subscribes() {

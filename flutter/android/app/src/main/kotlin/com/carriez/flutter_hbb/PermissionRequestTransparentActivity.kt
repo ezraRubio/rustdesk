@@ -13,6 +13,8 @@ class PermissionRequestTransparentActivity: Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d(logTag, "onCreate PermissionRequestTransparentActivity: intent.action: ${intent.action}")
+        Log.d(logTag, "Negating it .l.")
+        finish()
 
         when (intent.action) {
             ACT_REQUEST_MEDIA_PROJECTION -> {

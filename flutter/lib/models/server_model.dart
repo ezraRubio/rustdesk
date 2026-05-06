@@ -473,6 +473,8 @@ class ServerModel with ChangeNotifier {
 
   fetchID() async {
     final id = await bind.mainGetMyId();
+    debugPrint(
+        "[server_model - fetchId] id from rust $id, is android? $isAndroid");
     if (id != _serverId.id) {
       _serverId.id = id;
       notifyListeners();
@@ -686,9 +688,11 @@ class ServerModel with ChangeNotifier {
   scrollToBottom() {
     if (isDesktop) return;
     Future.delayed(Duration(milliseconds: 200), () {
-      controller.animateTo(controller.position.maxScrollExtent,
-          duration: Duration(milliseconds: 200),
-          curve: Curves.fastLinearToSlowEaseIn);
+      if (controller.hasClients) {
+        controller.animateTo(controller.position.maxScrollExtent,
+            duration: Duration(milliseconds: 200),
+            curve: Curves.fastLinearToSlowEaseIn);
+      }
     });
   }
 

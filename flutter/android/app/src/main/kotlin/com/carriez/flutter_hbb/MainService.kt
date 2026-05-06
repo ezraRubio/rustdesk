@@ -66,7 +66,8 @@ class MainService : Service() {
     @RequiresApi(Build.VERSION_CODES.N)
     fun rustPointerInput(kind: Int, mask: Int, x: Int, y: Int) {
         // turn on screen with LEFT_DOWN when screen off
-        if (!powerManager.isInteractive && (kind == 0 || mask == LEFT_DOWN)) {
+        val isInteractive = powerManager.isInteractive
+        if (!isInteractive && (kind == 0 || mask == LEFT_DOWN)) {
             if (wakeLock.isHeld) {
                 Log.d(logTag, "Turn on Screen, WakeLock release")
                 wakeLock.release()
@@ -230,13 +231,13 @@ class MainService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        Log.d(logTag,"MainService onCreate, sdk int:${Build.VERSION.SDK_INT} reuseVirtualDisplay:$reuseVirtualDisplay")
         FFI.init(this)
         HandlerThread("Service", Process.THREAD_PRIORITY_BACKGROUND).apply {
             start()
             serviceLooper = looper
             serviceHandler = Handler(looper)
         }
+        Log.d(logTag, "onCreate!")
         updateScreenInfo(resources.configuration.orientation)
         initNotification()
 
@@ -249,8 +250,8 @@ class MainService : Service() {
     }
 
     override fun onDestroy() {
-        checkMediaPermission()
-        stopService(Intent(this, FloatingWindowService::class.java))
+        Log.i(logTag, "onDestroy called, taking down the app")
+        destroy()
         super.onDestroy()
     }
 
@@ -299,6 +300,7 @@ class MainService : Service() {
                 SCREEN_INFO.scale = scale
                 SCREEN_INFO.dpi = dpi
                 if (isStart) {
+                  Log.d(logTag, "updateScreenInfo restarting capture? $isStart")
                     stopCapture()
                     FFI.refreshScreen()
                     startCapture()
@@ -314,7 +316,7 @@ class MainService : Service() {
         Log.d(logTag, "service onBind")
         return binder
     }
-
+// This ^ calls the one belove, basically allowing to bind to this service, nothing special about it 
     inner class LocalBinder : Binder() {
         init {
             Log.d(logTag, "LocalBinder init")
@@ -324,26 +326,27 @@ class MainService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d("whichService", "this service: ${Thread.currentThread()}")
         super.onStartCommand(intent, flags, startId)
         if (intent?.action == ACT_INIT_MEDIA_PROJECTION_AND_SERVICE) {
-            createForegroundNotification()
+            val startIntent = intent
+            serviceHandler?.post {
+                createForegroundNotification()
 
-            if (intent.getBooleanExtra(EXT_INIT_FROM_BOOT, false)) {
-                FFI.startService()
-            }
-            Log.d(logTag, "service starting: ${startId}:${Thread.currentThread()}")
-            val mediaProjectionManager =
-                getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+                if (startIntent.getBooleanExtra(EXT_INIT_FROM_BOOT, false)) {
+                    FFI.startService()
+                }
 
-            intent.getParcelableExtra<Intent>(EXT_MEDIA_PROJECTION_RES_INTENT)?.let {
-                mediaProjection =
-                    mediaProjectionManager.getMediaProjection(Activity.RESULT_OK, it)
-                checkMediaPermission()
-                _isReady = true
-            } ?: let {
-                Log.d(logTag, "getParcelableExtra intent null, invoke requestMediaProjection")
-                requestMediaProjection()
+                val mediaProjectionManager =
+                    getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+                startIntent.getParcelableExtra<Intent>(EXT_MEDIA_PROJECTION_RES_INTENT)?.let {
+                    mediaProjection =
+                        mediaProjectionManager.getMediaProjection(Activity.RESULT_OK, it)
+                    checkMediaPermission()
+                    _isReady = true
+                } ?: let {
+                    Log.d(logTag, "getParcelableExtra intent null, invoke requestMediaProjection")
+                    requestMediaProjection()
+                }
             }
         }
         return START_NOT_STICKY // don't use sticky (auto restart), the new service (from auto restart) will lose control
@@ -351,6 +354,7 @@ class MainService : Service() {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
+        Log.d(logTag, "onConfigurationChanged called")
         updateScreenInfo(newConfig.orientation)
     }
 
@@ -403,25 +407,20 @@ class MainService : Service() {
         return audioRecordHandle.onVoiceCallClosed(mediaProjection)
     }
 
-    fun startCapture(): Boolean {
-        if (isStart) {
-            return true
-        }
+    private fun startMediaProjectionCapture(): Boolean {
         if (mediaProjection == null) {
-            Log.w(logTag, "startCapture fail,mediaProjection is null")
+            Log.w(logTag, "startCapture fail, mediaProjection is null")
             return false
         }
         
-        updateScreenInfo(resources.configuration.orientation)
-        Log.d(logTag, "Start Capture")
         surface = createSurface()
-
+        
         if (useVP9) {
             startVP9VideoRecorder(mediaProjection!!)
         } else {
             startRawVideoRecorder(mediaProjection!!)
         }
-
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             if (!audioRecordHandle.createAudioRecorder(false, mediaProjection)) {
                 Log.d(logTag, "createAudioRecorder fail")
@@ -430,20 +429,32 @@ class MainService : Service() {
                 audioRecordHandle.startAudioRecorder()
             }
         }
+        
         checkMediaPermission()
         _isStart = true
-        FFI.setFrameRawEnable("video",true)
+        FFI.setFrameRawEnable("video", true)
         MainActivity.rdClipboardManager?.setCaptureStarted(_isStart)
         return true
+    }
+
+    fun startCapture(): Boolean {
+        Log.d(logTag, "startCapture, already started? $isStart")
+        if (isStart) {
+            Log.d(logTag, "skipping")
+            return true
+        }
+        
+        updateScreenInfo(resources.configuration.orientation)
+        return startMediaProjectionCapture()
     }
 
     @Synchronized
     fun stopCapture() {
         Log.d(logTag, "Stop Capture")
-        FFI.setFrameRawEnable("video",false)
+        FFI.setFrameRawEnable("video", false)
         _isStart = false
         MainActivity.rdClipboardManager?.setCaptureStarted(_isStart)
-        // release video
+        
         if (reuseVirtualDisplay) {
             // The virtual display video projection can be paused by calling `setSurface(null)`.
             // https://developer.android.com/reference/android/hardware/display/VirtualDisplay.Callback
@@ -468,7 +479,7 @@ class MainService : Service() {
         // suface needs to be release after `imageReader.close()` to imageReader access released surface
         // https://github.com/rustdesk/rustdesk/issues/4118#issuecomment-1515666629
         surface?.release()
-
+    
         // release audio
         _isAudioStart = false
         audioRecordHandle.tryReleaseAudio()

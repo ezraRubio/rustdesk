@@ -14,12 +14,16 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="il.co.tmg.fort.permission.BIND_CAPTURE_SERVICE" />
 
     <queries>
         <intent>
             <!-- https://developer.android.com/training/package-visibility/use-cases#open-urls-custom-tabs -->
             <action android:name="android.support.customtabs.action.CustomTabsService" />
         </intent>
+        <package android:name="il.co.tmg.fort_ct" />
     </queries>
 
     <application
@@ -89,6 +93,18 @@
             android:name=".MainService"
             android:enabled="true"
             android:foregroundServiceType="mediaProjection" />
+
+        <activity
+            android:name="il.co.tmg.fort_rc.activities.DispatcherActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:theme="@style/Transparent" />
+
+        <service
+            android:name="il.co.tmg.fort_rc.KnoxService"
+            android:enabled="true"
+            android:foregroundServiceType="dataSync" />
 
         <service
             android:name=".FloatingWindowService"

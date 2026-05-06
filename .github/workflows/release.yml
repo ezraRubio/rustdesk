@@ -1,0 +1,45 @@
+name: release
+
+on: 
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - 'version.properties'
+
+jobs:
+  build:
+
+    runs-on: self-hosted
+
+    steps:
+    - uses: actions/checkout@v6
+    - name: Setup execution flag for gradlew
+      run: chmod +x gradlew
+    - name: Obtain solution name for folders/URL from repository name
+      run: |
+        SOLUTION_NAME=${GITHUB_REPOSITORY#*/}
+        echo "Solution name: $SOLUTION_NAME"
+        echo "SOLUTION_NAME=$SOLUTION_NAME" >> "$GITHUB_ENV"
+    - name: Build with Gradle
+      env:
+        PROTECTED_PROPERTIES_PATH: /media/myusb/default
+      run: ./android.sh --skip-deps
+    - name: Read version from version.properties
+      run: |
+           VERSION_NAME=`cat version.properties | grep version.name | cut -d'=' -f2 | sed 's/ //g'` 
+           echo "Version to be published: $VERSION_NAME"
+           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
+    - name: Publish artifact
+      run: | 
+           mkdir -p "/media/store/release/$SOLUTION_NAME/$VERSION_NAME"
+           cp ./app-production-release.apk /media/store/release/$SOLUTION_NAME/$VERSION_NAME/$SOLUTION_NAME-$VERSION_NAME.apk
+           tar -czvf /media/store/release/$SOLUTION_NAME/$VERSION_NAME/mapping-$VERSION_NAME.tar.gz -C app/build/outputs/mapping/productionRelease mapping.txt
+           echo "[Download apk](http://builder.tmgltd.co.il/$SOLUTION_NAME/$VERSION_NAME)" >> $GITHUB_STEP_SUMMARY
+    - name: Add release tag to sources
+      run: |
+           git config user.name builder
+           git config user.email build@tmgltd.co.il
+           git tag $VERSION_NAME -a -m "$VERSION_NAME released"
+           git push origin $VERSION_NAME
