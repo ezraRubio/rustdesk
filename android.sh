@@ -441,7 +441,7 @@ build_flutter_apk() {
   sed -i "s/org.gradle.jvmargs=-Xmx1024M/org.gradle.jvmargs=-Xmx2g/g" ./flutter/android/gradle.properties 2>/dev/null || true
 
   # Use debug signing config (for unsigned APK)
-  sed -i "s/signingConfigs.release/signingConfigs.debug/g" ./flutter/android/app/build.gradle 2>/dev/null || true
+  # sed -i "s/signingConfigs.release/signingConfigs.debug/g" ./flutter/android/app/build.gradle 2>/dev/null || true
 
   # Set Java environment
   export JAVA_HOME="${JAVA_HOME:-/usr/lib/jvm/java-17-openjdk-amd64}"
