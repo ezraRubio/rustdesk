@@ -279,16 +279,16 @@ generate_bridge() {
   step "Generating Flutter-Rust Bridge"
 
   # Check if bridge files exist
-  if [[ -f "src/bridge_generated.rs" ]] && [[ -f "flutter/lib/generated_bridge.dart" ]]; then
-    info "Bridge files already exist"
-    read -p "Regenerate bridge? [y/N] " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-      info "Skipping bridge generation"
-      return
-    fi
-  fi
-
+  # if [[ -f "src/bridge_generated.rs" ]] && [[ -f "flutter/lib/generated_bridge.dart" ]]; then
+  #   info "Bridge files already exist"
+  #   read -p "Regenerate bridge? [y/N] " -n 1 -r
+  #   echo
+  #   if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+  #     info "Skipping bridge generation"
+  #     return
+  #   fi
+  # fi
+  #
   # Install flutter_rust_bridge_codegen if not present
   if ! command -v flutter_rust_bridge_codegen &>/dev/null; then
     info "Installing flutter_rust_bridge_codegen..."
@@ -459,7 +459,7 @@ build_flutter_apk() {
   popd
 
   # Move APK to root directory
-  APK_NAME="rustdesk-$VERSION-$ANDROID_ARCH.apk"
+  APK_NAME="app-production-release.apk"
   case "$ANDROID_ARCH" in
   aarch64 | arm64)
     mv "./flutter/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk" "./$APK_NAME"

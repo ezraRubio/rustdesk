@@ -1,0 +1,32 @@
+name: continuous integration
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+
+    runs-on: self-hosted
+
+    steps:
+    - uses: actions/checkout@v6
+    - name: Show android home
+      run: echo $ANDROID_HOME
+    - name: Setup execution flag for gradlew
+      run: chmod +x gradlew
+    - name: Build with Gradle
+      env:
+        PROTECTED_PROPERTIES_PATH: /home/builder/actions-runner/_protected/default
+      run: ./gradlew assembleDevelopmentDebug testDevelopmentDebugUnitTest
+#    - name: Create artifacts
+#      run: | 
+#           mkdir downloads
+#           cp app/build/outputs/apk/debug/app-debug.apk downloads/fortone-debug.apk
+#    - name: Upload APK to GitHub
+#      uses: actions/upload-artifact@v3
+#      with:
+#        name: fortone-debug
+#        path: downloads
