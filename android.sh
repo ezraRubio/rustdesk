@@ -161,34 +161,34 @@ preflight_checks() {
       error "Android SDK not found. Set ANDROID_SDK_ROOT or ANDROID_HOME"
     fi
   fi
-
-  # Check ANDROID_NDK_HOME
-  if [[ -z "$ANDROID_NDK_HOME" ]]; then
-    # Try to find NDK
-    for ndk_path in "$ANDROID_SDK_ROOT/ndk/$NDK_VERSION" "$ANDROID_SDK_ROOT/ndk-bundle" "$HOME/android-ndk-$NDK_VERSION"; do
-      if [[ -d "$ndk_path" ]]; then
-        export ANDROID_NDK_HOME="$ndk_path"
-        export ANDROID_NDK_ROOT="$ndk_path"
-        info "Found Android NDK: $ndk_path"
-        break
-      fi
-    done
-
-    # Also check for any NDK version
-    if [[ -z "$ANDROID_NDK_HOME" ]] && [[ -d "$ANDROID_SDK_ROOT/ndk" ]]; then
-      LATEST_NDK=$(ls -1 "$ANDROID_SDK_ROOT/ndk" | sort -V | tail -1)
-      if [[ -n "$LATEST_NDK" ]]; then
-        export ANDROID_NDK_HOME="$ANDROID_SDK_ROOT/ndk/$LATEST_NDK"
-        export ANDROID_NDK_ROOT="$ANDROID_NDK_HOME"
-        info "Found Android NDK: $ANDROID_NDK_HOME"
-      fi
-    fi
-
-    if [[ -z "$ANDROID_NDK_HOME" ]]; then
-      error "Android NDK not found. Set ANDROID_NDK_HOME"
-    fi
-  fi
-
+  #
+  # # Check ANDROID_NDK_HOME
+  # if [[ -z "$ANDROID_NDK_HOME" ]]; then
+  #   # Try to find NDK
+  #   for ndk_path in "$ANDROID_SDK_ROOT/ndk/$NDK_VERSION" "$ANDROID_SDK_ROOT/ndk-bundle" "$HOME/android-ndk-$NDK_VERSION"; do
+  #     if [[ -d "$ndk_path" ]]; then
+  #       export ANDROID_NDK_HOME="$ndk_path"
+  #       export ANDROID_NDK_ROOT="$ndk_path"
+  #       info "Found Android NDK: $ndk_path"
+  #       break
+  #     fi
+  #   done
+  #
+  #   # Also check for any NDK version
+  #   if [[ -z "$ANDROID_NDK_HOME" ]] && [[ -d "$ANDROID_SDK_ROOT/ndk" ]]; then
+  #     LATEST_NDK=$(ls -1 "$ANDROID_SDK_ROOT/ndk" | sort -V | tail -1)
+  #     if [[ -n "$LATEST_NDK" ]]; then
+  #       export ANDROID_NDK_HOME="$ANDROID_SDK_ROOT/ndk/$LATEST_NDK"
+  #       export ANDROID_NDK_ROOT="$ANDROID_NDK_HOME"
+  #       info "Found Android NDK: $ANDROID_NDK_HOME"
+  #     fi
+  #   fi
+  #
+  #   if [[ -z "$ANDROID_NDK_HOME" ]]; then
+  #     error "Android NDK not found. Set ANDROID_NDK_HOME"
+  #   fi
+  # fi
+  #
   # Verify NDK toolchain exists
   NDK_TOOLCHAIN="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64"
   if [[ ! -d "$NDK_TOOLCHAIN" ]]; then
