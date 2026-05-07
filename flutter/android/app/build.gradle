@@ -113,13 +113,13 @@ android {
     }
     println("Properties file exists: " + keystorePropertiesFile.exists())
     println("Keystore filename value: '" + keystoreProperties['keystore.filename'] + "'")
-    println("Resolved storeFile: " + file("${protectedPropertiesPath}${keystoreProperties['keystore.filename']}").absolutePath)
+    println("Resolved storeFile: " + file("${protectedPropertiesPath}/${keystoreProperties['keystore.filename']}").absolutePath)
     signingConfigs {
       release {
         keyAlias keystoreProperties['key.alias']
         keyPassword keystoreProperties['key.password']
         storeFile keystoreProperties['keystore.filename'] 
-            ? file("${protectedPropertiesPath}${keystoreProperties['keystore.filename']}") 
+            ? file("${protectedPropertiesPath}/${keystoreProperties['keystore.filename']}") 
             : null
         storePassword keystoreProperties['keystore.password']
       }
