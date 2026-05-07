@@ -377,6 +377,21 @@ build_native_lib() {
   export ANDROID_NDK_HOME="$ANDROID_NDK_HOME"
   export ANDROID_NDK_ROOT="$ANDROID_NDK_HOME"
 
+  export ANDROID_NDK_HOME="$ANDROID_NDK_HOME"
+  export ANDROID_NDK_ROOT="$ANDROID_NDK_HOME"
+
+  export NDK_TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
+  export NDK_SYSROOT=$NDK_TOOLCHAIN/sysroot
+
+  export ANDROID_API=21
+  export BINDGEN_EXTRA_CLANG_ARGS_aarch64_linux_android="\
+          --sysroot=$NDK_SYSROOT \
+          -I$NDK_SYSROOT/usr/include \
+          -D__ANDROID_API__=$ANDROID_API \
+          --target=aarch64-linux-android$ANDROID_API \
+  "
+  info "bindgen: $BINDGEN_EXTRA_CLANG_ARGS_aarch64_linux_android"
+
   info "Using NDK: $ANDROID_NDK_HOME"
   info "Building for target: $RUST_TARGET"
 
