@@ -13,7 +13,7 @@ def keystoreProperties = new Properties()
 
 def protectedPropertiesPath = System.getenv("PROTECTED_PROPERTIES_PATH") ?: "../"
 
-def keystorePropertiesFile = new File(protectedPropertiesPath +'sign.properties')
+def keystorePropertiesFile = new File(protectedPropertiesPath +'/sign.properties')
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
