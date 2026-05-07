@@ -66,7 +66,7 @@ repositories {
     maven {
         url = findRustlsPlatformVerifierMavenDir()
         metadataSources.artifact()
-    }.release
+    }
 }
 
 protobuf {
