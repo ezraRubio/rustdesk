@@ -13,7 +13,7 @@ def keystoreProperties = new Properties()
 
 def protectedPropertiesPath = System.getenv("PROTECTED_PROPERTIES_PATH") ?: "../"
 
-def keystorePropertiesFile = new File(protectedPropertiesPath +'sign.properties')
+def keystorePropertiesFile = new File(protectedPropertiesPath +'/sign.properties')
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
@@ -111,12 +111,16 @@ android {
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
     }
-
+    println("Properties file exists: " + keystorePropertiesFile.exists())
+    println("Keystore filename value: '" + keystoreProperties['keystore.filename'] + "'")
+    println("Resolved storeFile: " + file("${protectedPropertiesPath}/${keystoreProperties['keystore.filename']}").absolutePath)
     signingConfigs {
       release {
         keyAlias keystoreProperties['key.alias']
         keyPassword keystoreProperties['key.password']
-        storeFile keystoreProperties['keystore.filename'] ? file(keystoreProperties['keystore.filename']) : null
+        storeFile keystoreProperties['keystore.filename'] 
+            ? file("${protectedPropertiesPath}/${keystoreProperties['keystore.filename']}") 
+            : null
         storePassword keystoreProperties['keystore.password']
       }
     }

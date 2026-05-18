@@ -290,6 +290,7 @@ class KnoxCapturer(
     // ========================================================================
 
     private fun handleGetSessionInfoReply(msg: Message) {
+        Log.d(LOG_TAG_KNOX, " step 3 got session info, message: ${msg}, data: ${msg.data}")
         if (stopped) return
 
         if (msg.arg1 < 0) {
@@ -312,6 +313,7 @@ class KnoxCapturer(
             stopSession("Failed to parse session_info: ${e.message}")
             return
         }
+        Log.d(LOG_TAG_KNOX, "got session info, payload: ${payload}")
 
         if (payload.remoteSessionId != remoteSessionId) {
             Log.e(LOG_TAG_KNOX, "Session id mismatch: expected=$remoteSessionId, " +
@@ -646,7 +648,12 @@ class KnoxCapturer(
     }
 
     private fun parseSessionPayload(json: String): SessionPayload {
+        Log.d(LOG_TAG_KNOX, "parsing json, stringified: ${json}")
         val obj = JSONObject(json)
+        Log.d(LOG_TAG_KNOX, "parsing json, object: ${obj}")
+        Log.d(LOG_TAG_KNOX, "parsing json, remoteSessionId: ${obj.getString("remoteSessionId")}")
+        Log.d(LOG_TAG_KNOX, "parsing json, url: ${obj.optString("url")}")
+        Log.d(LOG_TAG_KNOX, "parsing json, key: ${obj.optString("key")}")
         return SessionPayload(
             remoteSessionId = obj.getString("remoteSessionId"),
             status = SessionState.entries.first { it.status == obj.getString("status") },
