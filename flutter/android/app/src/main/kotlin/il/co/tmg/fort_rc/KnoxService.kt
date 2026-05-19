@@ -153,7 +153,7 @@ class KnoxService : Service() {
             "rustdesk:knoxwakelock"
         )
     }
-    private var isHalfScale: Boolean? = null
+    private var isHalfScale: Boolean? = true
     private var _isStart = false
     private val isStart: Boolean get() = _isStart
     private lateinit var notificationManager:NotificationManager

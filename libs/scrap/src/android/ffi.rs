@@ -189,6 +189,11 @@ pub extern "system" fn Java_ffi_FFI_setFrameRawEnable(
 
 #[no_mangle]
 pub extern "system" fn Java_ffi_FFI_init(env: JNIEnv, _class: JClass, ctx: JObject) {
+    android_logger::init_once(
+        android_logger::Config::default()
+            .with_max_level(log::LevelFilter::Debug) // limit log level
+            .with_tag("rust"), // logs will show under mytag tag
+    );
     log::debug!("MainService init from java");
     if let Ok(jvm) = env.get_java_vm() {
         let java_vm = jvm.get_java_vm_pointer() as *mut c_void;
