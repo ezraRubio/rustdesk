@@ -25,6 +25,7 @@ import android.content.Context
 import android.os.PowerManager
 import androidx.annotation.Keep
 import androidx.annotation.RequiresApi
+import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import android.view.WindowManager
@@ -39,6 +40,7 @@ import com.carriez.flutter_hbb.LEFT_DOWN
 import com.carriez.flutter_hbb.R
 import com.carriez.flutter_hbb.SCREEN_INFO
 import com.carriez.flutter_hbb.MainActivity
+import com.carriez.flutter_hbb.getScreenSize
 import android.content.ComponentName
 import android.content.pm.PackageManager
 
