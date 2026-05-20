@@ -237,6 +237,8 @@ impl VideoQoS {
             // update ratio directly
             self.ratio = self.latest_quality().ratio();
         }
+        log::debug!("user quality {:?}", user.quality);
+        log::debug!("ratio {:?}", self.ratio);
     }
 
     pub fn user_record(&mut self, id: i32, v: bool) {

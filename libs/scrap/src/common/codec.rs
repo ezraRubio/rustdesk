@@ -927,6 +927,7 @@ impl Quality {
 }
 
 pub fn base_bitrate(width: u32, height: u32) -> u32 {
+    log::debug!("base_bitrate with width:{} and height:{}", width, height);
     const RESOLUTION_PRESETS: &[(u32, u32, u32)] = &[
         (640, 480, 400),     // VGA, 307k pixels
         (800, 600, 500),     // SVGA, 480k pixels
@@ -957,6 +958,7 @@ pub fn base_bitrate(width: u32, height: u32) -> u32 {
         .unwrap_or(((1920 * 1080) as u32, &2073)); // default 1080p
 
     let bitrate = (*preset_bitrate as f32 * (pixels as f32 / preset_pixels as f32)).round() as u32;
+    log::debug!("resulting bitrate:{}", bitrate);
 
     #[cfg(target_os = "android")]
     {

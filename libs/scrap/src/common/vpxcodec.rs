@@ -313,6 +313,7 @@ impl VpxEncoder {
     }
 
     fn bitrate(width: u32, height: u32, ratio: f32) -> u32 {
+        log::debug!("or maybe vpx with ratio: {}", ratio);
         let bitrate = base_bitrate(width, height) as f32;
         (bitrate * ratio) as u32
     }
