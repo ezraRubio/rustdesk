@@ -259,10 +259,10 @@ pub struct MediaCodecInfos {
 
 #[no_mangle]
 pub extern "system" fn Java_ffi_FFI_setCodecInfo(env: JNIEnv, _class: JClass, info: JString) {
-    log::debug!("ffi setCodecInfo called with info: {}", info);
     let mut env = env;
     if let Ok(info) = env.get_string(&info) {
         let info: String = info.into();
+        log::debug!("ffi setCodecInfo called with info: {}", info);
         if let Ok(infos) = serde_json::from_str::<MediaCodecInfos>(&info) {
             *MEDIA_CODEC_INFOS.write().unwrap() = Some(infos);
         }
