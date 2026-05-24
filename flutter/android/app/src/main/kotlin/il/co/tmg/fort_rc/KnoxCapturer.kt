@@ -183,7 +183,7 @@ class KnoxCapturer(
 
     private val knoxFrameCallback = object : IFrameCallback.Stub() {
         override fun onFrameAvailable(memory: SharedMemory) {
-            Log.i("received memory from fct $memory, and session is ready? $isSessionReady, is stopped? $stopped")
+            Log.i(LOG_TAG_KNOX, "received memory from fct $memory, and session is ready? $isSessionReady, is stopped? $stopped")
             if (stopped || !isSessionReady) {
                 return
             }
@@ -197,7 +197,7 @@ class KnoxCapturer(
                 }
                 if (buf == null) return@onFrameAvailable
                 buf.rewind()
-                Log.i("bout to pass mapped buffer to rust backend: $buf")
+                Log.i(LOG_TAG_KNOX, "bout to pass mapped buffer to rust backend: $buf")
                 FFI.onVideoFrameUpdate(buf)
             } catch (e: Exception) {
                 Log.e(LOG_TAG_KNOX, "Error processing Knox frame", e)
