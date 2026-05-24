@@ -551,8 +551,8 @@ class KnoxCapturer(
     fun startCapture() {
       val capServ = captureService
       if (capServ != null) {
-          capServ.registerFrameCallback(knoxFrameCallback)
           FFI.setFrameRawEnable("video", true)
+          capServ.registerFrameCallback(knoxFrameCallback)
           sendStartSessionMessage()
       }
     }
