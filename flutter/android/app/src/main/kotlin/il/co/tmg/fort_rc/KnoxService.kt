@@ -13,6 +13,8 @@ import android.os.HandlerThread
 import android.os.IBinder
 import android.os.Looper
 import android.os.Process
+import android.content.res.Configuration
+import android.content.res.Configuration.ORIENTATION_LANDSCAPE
 import android.util.Log
 import ffi.FFI
 import io.flutter.embedding.android.FlutterActivity
@@ -125,7 +127,8 @@ class KnoxService : Service() {
                 stopSession("stop_capture signal received from client")
             }
             "half_scale" -> {
-                Log.d(LOG_TAG, "half_scale received from rust, not supported on this path")
+                Log.d(LOG_TAG, "half_scale received from rust, not supported on this path, checking orientation instead")
+                setOrientation()
                 // val halfScale = arg1.toBoolean()
                 // if (isHalfScale != halfScale) {
                 //     isHalfScale = halfScale
@@ -393,6 +396,11 @@ class KnoxService : Service() {
         result.put("h", h)
         result.put("codecs", codecArray)
         FFI.setCodecInfo(result.toString())
+    }
+
+    private fun setOrientation() {
+     val orientation = resources.configuration.orientation 
+     Log.i(LOG_TAG, "orientation: $orientation")
     }
 
 }

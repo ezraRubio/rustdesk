@@ -183,6 +183,7 @@ class KnoxCapturer(
 
     private val knoxFrameCallback = object : IFrameCallback.Stub() {
         override fun onFrameAvailable(memory: SharedMemory) {
+            Log.i("received memory from fct $memory, and session is ready? $isSessionReady, is stopped? $stopped")
             if (stopped || !isSessionReady) {
                 return
             }
@@ -196,6 +197,7 @@ class KnoxCapturer(
                 }
                 if (buf == null) return@onFrameAvailable
                 buf.rewind()
+                Log.i("bout to pass mapped buffer to rust backend: $buf")
                 FFI.onVideoFrameUpdate(buf)
             } catch (e: Exception) {
                 Log.e(LOG_TAG_KNOX, "Error processing Knox frame", e)
@@ -648,12 +650,7 @@ class KnoxCapturer(
     }
 
     private fun parseSessionPayload(json: String): SessionPayload {
-        Log.d(LOG_TAG_KNOX, "parsing json, stringified: ${json}")
         val obj = JSONObject(json)
-        Log.d(LOG_TAG_KNOX, "parsing json, object: ${obj}")
-        Log.d(LOG_TAG_KNOX, "parsing json, remoteSessionId: ${obj.getString("remoteSessionId")}")
-        Log.d(LOG_TAG_KNOX, "parsing json, url: ${obj.optString("url")}")
-        Log.d(LOG_TAG_KNOX, "parsing json, key: ${obj.optString("key")}")
         return SessionPayload(
             remoteSessionId = obj.getString("remoteSessionId"),
             status = SessionState.entries.first { it.status == obj.getString("status") },
