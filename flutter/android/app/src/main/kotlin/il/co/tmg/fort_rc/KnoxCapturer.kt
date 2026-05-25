@@ -183,7 +183,6 @@ class KnoxCapturer(
 
     private val knoxFrameCallback = object : IFrameCallback.Stub() {
         override fun onFrameAvailable(memory: SharedMemory) {
-            Log.i(LOG_TAG_KNOX, "received memory from fct $memory, and session is ready? $isSessionReady, is stopped? $stopped")
             if (stopped || !isSessionReady) {
                 return
             }
@@ -197,7 +196,6 @@ class KnoxCapturer(
                 }
                 if (buf == null) return@onFrameAvailable
                 buf.rewind()
-                Log.i(LOG_TAG_KNOX, "bout to pass mapped buffer to rust backend: $buf")
                 FFI.onVideoFrameUpdate(buf)
             } catch (e: Exception) {
                 Log.e(LOG_TAG_KNOX, "Error processing Knox frame", e)
@@ -315,7 +313,6 @@ class KnoxCapturer(
             stopSession("Failed to parse session_info: ${e.message}")
             return
         }
-        Log.d(LOG_TAG_KNOX, "got session info, payload: ${payload}")
 
         if (payload.remoteSessionId != remoteSessionId) {
             Log.e(LOG_TAG_KNOX, "Session id mismatch: expected=$remoteSessionId, " +
@@ -694,7 +691,6 @@ class KnoxCapturer(
                   } catch (e: Exception) {
                     0
                   }
-                  Log.d(LOG_TAG_KNOX, "polling current online status: $status")
                   if (status > 0) {
                         Log.i(LOG_TAG_KNOX,"Serveronline (state=$state)")
                         onReady()

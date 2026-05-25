@@ -129,10 +129,6 @@ class KnoxService : Service() {
             "half_scale" -> {
                 Log.d(LOG_TAG, "half_scale received from rust, not supported on this path, checking orientation instead")
                 setOrientation()
-                // val halfScale = arg1.toBoolean()
-                // if (isHalfScale != halfScale) {
-                //     isHalfScale = halfScale
-                // }
             }
             else -> { }
         }
