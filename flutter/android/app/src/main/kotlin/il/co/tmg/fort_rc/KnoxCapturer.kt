@@ -313,7 +313,6 @@ class KnoxCapturer(
             stopSession("Failed to parse session_info: ${e.message}")
             return
         }
-        Log.d(LOG_TAG_KNOX, "got session info, payload: ${payload}")
 
         if (payload.remoteSessionId != remoteSessionId) {
             Log.e(LOG_TAG_KNOX, "Session id mismatch: expected=$remoteSessionId, " +
@@ -549,8 +548,8 @@ class KnoxCapturer(
     fun startCapture() {
       val capServ = captureService
       if (capServ != null) {
-          capServ.registerFrameCallback(knoxFrameCallback)
           FFI.setFrameRawEnable("video", true)
+          capServ.registerFrameCallback(knoxFrameCallback)
           sendStartSessionMessage()
       }
     }
@@ -648,12 +647,7 @@ class KnoxCapturer(
     }
 
     private fun parseSessionPayload(json: String): SessionPayload {
-        Log.d(LOG_TAG_KNOX, "parsing json, stringified: ${json}")
         val obj = JSONObject(json)
-        Log.d(LOG_TAG_KNOX, "parsing json, object: ${obj}")
-        Log.d(LOG_TAG_KNOX, "parsing json, remoteSessionId: ${obj.getString("remoteSessionId")}")
-        Log.d(LOG_TAG_KNOX, "parsing json, url: ${obj.optString("url")}")
-        Log.d(LOG_TAG_KNOX, "parsing json, key: ${obj.optString("key")}")
         return SessionPayload(
             remoteSessionId = obj.getString("remoteSessionId"),
             status = SessionState.entries.first { it.status == obj.getString("status") },
@@ -697,7 +691,6 @@ class KnoxCapturer(
                   } catch (e: Exception) {
                     0
                   }
-                  Log.d(LOG_TAG_KNOX, "polling current online status: $status")
                   if (status > 0) {
                         Log.i(LOG_TAG_KNOX,"Serveronline (state=$state)")
                         onReady()
