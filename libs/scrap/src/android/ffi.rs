@@ -191,10 +191,9 @@ pub extern "system" fn Java_ffi_FFI_setFrameRawEnable(
 pub extern "system" fn Java_ffi_FFI_init(env: JNIEnv, _class: JClass, ctx: JObject) {
     android_logger::init_once(
         android_logger::Config::default()
-            .with_max_level(log::LevelFilter::Debug) // limit log level
-            .with_tag("rust"), // logs will show under mytag tag
+            .with_max_level(log::LevelFilter::Debug)
+            .with_tag("rust"),
     );
-    log::debug!("MainService init from java");
     if let Ok(jvm) = env.get_java_vm() {
         let java_vm = jvm.get_java_vm_pointer() as *mut c_void;
         let mut jvm_lock = JVM.write().unwrap();
@@ -262,7 +261,6 @@ pub extern "system" fn Java_ffi_FFI_setCodecInfo(env: JNIEnv, _class: JClass, in
     let mut env = env;
     if let Ok(info) = env.get_string(&info) {
         let info: String = info.into();
-        log::debug!("ffi setCodecInfo called with info: {}", info);
         if let Ok(infos) = serde_json::from_str::<MediaCodecInfos>(&info) {
             *MEDIA_CODEC_INFOS.write().unwrap() = Some(infos);
         }

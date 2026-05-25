@@ -253,7 +253,6 @@ impl HwRamEncoder {
     }
 
     pub fn calc_bitrate(width: usize, height: usize, ratio: f32, h264: bool) -> u32 {
-        log::debug!("is it comming from calc_bitrate? ratio: {}", ratio);
         let base = base_bitrate(width as _, height as _) as f32 * ratio;
         let threshold = 2000.0;
         let decay_rate = 0.001; // 1000 * 0.001 = 1
@@ -277,7 +276,6 @@ impl HwRamEncoder {
                 1.5
             }
         };
-        log::debug!("calculated factor:{}", factor);
         (base * factor) as u32
     }
 

@@ -229,15 +229,11 @@ impl VideoQoS {
             }
         };
 
-        log::debug!("image_quality {:?}", image_quality);
         let quality = Some((hbb_common::get_time(), convert_quality(image_quality)));
-        log::debug!("quality {:?}", quality);
         if let Some(user) = self.users.get_mut(&id) {
             user.quality = quality;
-            // update ratio directly
             self.ratio = self.latest_quality().ratio();
         }
-        log::debug!("ratio {:?}", self.ratio);
     }
 
     pub fn user_record(&mut self, id: i32, v: bool) {
