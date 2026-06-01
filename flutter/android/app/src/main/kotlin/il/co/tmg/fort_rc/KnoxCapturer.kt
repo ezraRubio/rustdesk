@@ -219,6 +219,7 @@ class KnoxCapturer(
 
     fun stopSession(reason: String) {
         if (stopped) return
+        KnoxService.currentSessionState = null
         stopped = true
         isSessionReady = false
 
@@ -333,6 +334,8 @@ class KnoxCapturer(
             stopSession("Attended sessions not yet implemented")
             return
         }
+
+        KnoxService.currentSessionState = payload.status
 
         // Now that we have the servers' creds, we can start it:
         val appConfig = buildAppConfig(payload)
@@ -473,6 +476,7 @@ class KnoxCapturer(
 
         isSessionReady = true
         pendingStartAfterPrepare = false
+        KnoxService.currentSessionState = payload.status
 
         service.onSessionReadyForConnection()
     }
@@ -539,6 +543,7 @@ class KnoxCapturer(
         }
 
         isSessionRunning = true
+        KnoxService.currentSessionState = payload.status
     }
 
     // ========================================================================
