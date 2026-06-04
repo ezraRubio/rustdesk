@@ -96,6 +96,7 @@ android {
 
     buildFeatures {
         aidl true
+        viewBinding true
     }
 
     compileOptions {
@@ -110,6 +111,7 @@ android {
         targetSdkVersion 33
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
+        resValue "string", "app_version", "v${flutterVersionName}"
     }
     println("Properties file exists: " + keystorePropertiesFile.exists())
     println("Keystore filename value: '" + keystoreProperties['keystore.filename'] + "'")
