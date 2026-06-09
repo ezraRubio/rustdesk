@@ -41,7 +41,10 @@ import android.app.PendingIntent.FLAG_UPDATE_CURRENT
 import com.carriez.flutter_hbb.LEFT_DOWN
 import com.carriez.flutter_hbb.R
 import com.carriez.flutter_hbb.SCREEN_INFO
+import com.carriez.flutter_hbb.MainActivity
 import com.carriez.flutter_hbb.getScreenSize
+import android.content.ComponentName
+import android.content.pm.PackageManager
 
 /**
  * KnoxService is a foreground service that owns the full fort rc session lifecycle.
