@@ -326,12 +326,14 @@ pub fn session_toggle_option(session_id: SessionID, value: String) {
         try_sync_peer_option(&session, &session_id, &value, None);
     }
     #[cfg(not(target_os = "ios"))]
-    if sessions::get_session_by_session_id(&session_id).is_some() && value == "disable-clipboard" {
+    if sessions::get_session_by_session_id(&session_id).is_some()
+        && (value == "disable-clipboard" || value == "view-only")
+    {
         crate::flutter::update_text_clipboard_required();
     }
     #[cfg(feature = "unix-file-copy-paste")]
     if sessions::get_session_by_session_id(&session_id).is_some()
-        && value == config::keys::OPTION_ENABLE_FILE_COPY_PASTE
+        && (value == config::keys::OPTION_ENABLE_FILE_COPY_PASTE || value == "view-only")
     {
         crate::flutter::update_file_clipboard_required();
     }
@@ -1151,6 +1153,22 @@ pub fn main_discover() {
 
 pub fn main_get_api_server() -> String {
     get_api_server()
+}
+
+pub fn main_deploy_device(token: String, id: String) -> String {
+    #[cfg(target_os = "android")]
+    {
+        let new_id = match id.trim() {
+            "" => None,
+            id => Some(id.to_owned()),
+        };
+        ui_interface::deploy_device(token, new_id).message()
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = (token, id);
+        "Deployment is not supported on this platform.".to_owned()
+    }
 }
 
 pub fn main_resolve_avatar_url(avatar: String) -> SyncReturn<String> {
@@ -2116,6 +2134,7 @@ pub fn main_start_service() {
     #[cfg(target_os = "android")]
     {
         config::Config::set_option("stop-service".into(), "".into());
+        crate::rendezvous_mediator::reset_needs_deploy_notification();
         crate::rendezvous_mediator::RendezvousMediator::restart();
     }
 }
@@ -2213,7 +2232,7 @@ pub fn cm_elevate_portable(conn_id: i32) {
 }
 
 pub fn cm_switch_back(conn_id: i32) {
-    #[cfg(not(any(target_os = "ios")))]
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
     crate::ui_cm_interface::switch_back(conn_id);
 }
 
@@ -2471,23 +2490,13 @@ pub fn is_disable_installation() -> SyncReturn<bool> {
 }
 
 pub fn is_preset_password() -> bool {
-    let hard = config::HARD_SETTINGS
-        .read()
-        .unwrap()
-        .get("password")
-        .cloned()
-        .unwrap_or_default();
-    if hard.is_empty() {
-        return false;
-    }
-
     // On desktop, service owns the authoritative config; query it via IPC and return only a boolean.
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     return crate::ipc::is_permanent_password_preset();
 
     // On mobile, we have no service IPC; verify against local storage.
     #[cfg(any(target_os = "android", target_os = "ios"))]
-    return config::Config::matches_permanent_password_plain(&hard);
+    return config::Config::is_using_preset_password();
 }
 
 // Don't call this function for desktop version.
@@ -2843,8 +2852,16 @@ pub fn main_get_common(key: String) -> String {
                 crate::platform::windows::is_msi_installed(),
                 crate::common::is_custom_client(),
             ) {
-                (Ok(true), false) => format!("rustdesk-{_version}-x86_64.msi"),
-                (Ok(true), true) | (Ok(false), _) => format!("rustdesk-{_version}-x86_64.exe"),
+                (Ok(true), false) => match crate::platform::windows::release_arch_suffix() {
+                    Some(arch) => format!("rustdesk-{_version}-{arch}.msi"),
+                    None => "error:unsupported".to_owned(),
+                },
+                (Ok(true), true) | (Ok(false), _) => {
+                    match crate::platform::windows::release_arch_suffix() {
+                        Some(arch) => format!("rustdesk-{_version}-{arch}.exe"),
+                        None => "error:unsupported".to_owned(),
+                    }
+                }
                 (Err(e), _) => {
                     log::error!("Failed to check if is msi: {}", e);
                     format!("error:update-failed-check-msi-tip")
@@ -3065,6 +3082,7 @@ pub mod server_side {
     pub unsafe extern "system" fn Java_ffi_FFI_startService(_env: JNIEnv, _class: JClass) {
         log::debug!("startService from jvm");
         config::Config::set_option("stop-service".into(), "".into());
+        crate::rendezvous_mediator::reset_needs_deploy_notification();
         crate::rendezvous_mediator::RendezvousMediator::restart();
     }
 
