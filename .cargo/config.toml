@@ -14,5 +14,15 @@ rustflags = [
 #rustflags = [
 #    "-C", "link-args=-Wl,-Bstatic -lc -Wl,-Bdynamic"
 #]
+
+# Android 16KB page size alignment (required for Android 15+ devices)
+[target.aarch64-linux-android]
+rustflags = ["-C", "link-args=-Wl,-z,max-page-size=16384"]
+[target.armv7-linux-androideabi]
+rustflags = ["-C", "link-args=-Wl,-z,max-page-size=16384"]
+[target.x86_64-linux-android]
+rustflags = ["-C", "link-args=-Wl,-z,max-page-size=16384"]
+[target.i686-linux-android]
+rustflags = ["-C", "link-args=-Wl,-z,max-page-size=16384"]
 [net]
 git-fetch-with-cli = true

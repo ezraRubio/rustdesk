@@ -432,6 +432,19 @@ build_native_lib() {
 
   info "Native library built and copied to: $JNILIBS_DIR"
   ls -la "$JNILIBS_DIR"
+
+  # Verify 16KB page alignment (Android 15+ requirement)
+  LLVM_OBJDUMP="$NDK_TOOLCHAIN/bin/llvm-objdump"
+  if [[ -x "$LLVM_OBJDUMP" ]]; then
+    ALIGN=$("$LLVM_OBJDUMP" -p "./target/$RUST_TARGET/release/liblibrustdesk.so" 2>/dev/null | grep LOAD | head -1 | grep -oP 'align \d+\*\*\d+' || echo "")
+    if [[ "$ALIGN" =~ 2\*\*14 ]]; then
+      info "16KB page alignment verified: $ALIGN"
+    elif [[ -n "$ALIGN" ]]; then
+      warn "Page alignment is $ALIGN (expected 2**14 for 16KB). Check RUSTFLAGS in .cargo/config.toml"
+    else
+      warn "Could not determine page alignment"
+    fi
+  fi
 }
 
 # ============================================================================
