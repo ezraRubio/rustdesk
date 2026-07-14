@@ -1118,10 +1118,16 @@ impl Connection {
             conn.lr.my_id.clone(),
         );
         video_service::notify_video_frame_fetched_by_conn_id(id, None);
-        if conn.authorized
-            && conn.conn_audit_primary_auth != ConnAuditPrimaryAuth::TemporaryPassword
-        {
-            password::update_temporary_password();
+        if conn.authorized {
+            if conn.conn_audit_primary_auth == ConnAuditPrimaryAuth::TemporaryPassword {
+                log::debug!(
+                    "temp-password: skip close rotation (consumed on auth) conn=#{}",
+                    id
+                );
+            } else {
+                password::update_temporary_password();
+                log::debug!("temp-password: rotated on close conn=#{}", id);
+            }
         }
         if let Err(err) = conn.try_port_forward_loop(&mut rx_from_cm).await {
             conn.on_close(&err.to_string(), false).await;
@@ -2262,24 +2268,33 @@ impl Connection {
         state.failures = 0;
     }
 
-    fn next_temporary_password() -> String {
-        let len = password::temporary_password_length();
-        if Config::get_bool_option(keys::OPTION_ALLOW_NUMERNIC_ONE_TIME_PASSWORD) {
-            Config::get_auto_numeric_password(len)
-        } else {
-            Config::get_auto_password(len)
-        }
-    }
-
-    /// Atomically validates the current temporary password and rotates it on success.
+    /// Validates the current temporary password and rotates it on success (single-use).
     fn consume_temporary_password_if_valid(&self) -> Option<String> {
+        use std::sync::Once;
+        static BUILD_MARKER: Once = Once::new();
+        BUILD_MARKER.call_once(|| {
+            log::info!("temp-password: single-use consume active (build marker)");
+        });
+
         let mut lock = password::TEMPORARY_PASSWORD.write().unwrap();
         let current = lock.clone();
         if current.is_empty() || !self.validate_password_plain(&current) {
             return None;
         }
         let consumed = current;
-        *lock = Self::next_temporary_password();
+        let len = password::temporary_password_length();
+        *lock = if Config::get_bool_option(keys::OPTION_ALLOW_NUMERNIC_ONE_TIME_PASSWORD) {
+            Config::get_auto_numeric_password(len)
+        } else {
+            Config::get_auto_password(len)
+        };
+        log::info!(
+            "temp-password: consumed and rotated conn=#{} peer={} ip={} new_len={}",
+            self.inner.id(),
+            self.lr.my_id,
+            self.ip,
+            lock.len(),
+        );
         Some(consumed)
     }
 
@@ -2294,6 +2309,14 @@ impl Connection {
                 );
                 self.check_update_temporary_password(true);
                 return true;
+            } else if !self.lr.password.is_empty() {
+                log::info!(
+                    "temp-password: login rejected conn=#{} peer={} ip={} active_len={}",
+                    self.inner.id(),
+                    self.lr.my_id,
+                    self.ip,
+                    password::temporary_password().len(),
+                );
             }
         }
         if password::permanent_enabled() || allow_permanent_password {
