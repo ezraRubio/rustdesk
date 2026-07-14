@@ -1118,7 +1118,9 @@ impl Connection {
             conn.lr.my_id.clone(),
         );
         video_service::notify_video_frame_fetched_by_conn_id(id, None);
-        if conn.authorized {
+        if conn.authorized
+            && conn.conn_audit_primary_auth != ConnAuditPrimaryAuth::TemporaryPassword
+        {
             password::update_temporary_password();
         }
         if let Err(err) = conn.try_port_forward_loop(&mut rx_from_cm).await {
@@ -2210,11 +2212,9 @@ impl Connection {
         self.verify_h1(&h1[..])
     }
 
-    // This is coarse brute-force protection for the current temporary password value.
-    // We only care whether the active temporary password itself was presented correctly,
-    // not whether later authorization steps succeed. A successful temporary-password
-    // match clears this state immediately, and the counter also resets whenever the
-    // temporary password changes or is rotated.
+    // Coarse brute-force protection for the current temporary password value.
+    // Successful validation consumes the password immediately (single-use), which also
+    // resets this counter whenever the active temporary password changes.
     fn check_update_temporary_password(&self, temporary_password_success: bool) {
         const MAX_CONSECUTIVE_FAILURES: i32 = 10;
         #[derive(Default)]
@@ -2262,10 +2262,30 @@ impl Connection {
         state.failures = 0;
     }
 
+    fn next_temporary_password() -> String {
+        let len = password::temporary_password_length();
+        if Config::get_bool_option(keys::OPTION_ALLOW_NUMERNIC_ONE_TIME_PASSWORD) {
+            Config::get_auto_numeric_password(len)
+        } else {
+            Config::get_auto_password(len)
+        }
+    }
+
+    /// Atomically validates the current temporary password and rotates it on success.
+    fn consume_temporary_password_if_valid(&self) -> Option<String> {
+        let mut lock = password::TEMPORARY_PASSWORD.write().unwrap();
+        let current = lock.clone();
+        if current.is_empty() || !self.validate_password_plain(&current) {
+            return None;
+        }
+        let consumed = current;
+        *lock = Self::next_temporary_password();
+        Some(consumed)
+    }
+
     fn validate_password(&mut self, allow_permanent_password: bool) -> bool {
         if password::temporary_enabled() {
-            let password = password::temporary_password();
-            if self.validate_password_plain(&password) {
+            if let Some(password) = self.consume_temporary_password_if_valid() {
                 self.set_conn_audit_primary_auth(ConnAuditPrimaryAuth::TemporaryPassword);
                 raii::AuthedConnID::update_or_insert_session(
                     self.session_key(),
