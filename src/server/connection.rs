@@ -1118,16 +1118,10 @@ impl Connection {
             conn.lr.my_id.clone(),
         );
         video_service::notify_video_frame_fetched_by_conn_id(id, None);
-        if conn.authorized {
-            if conn.conn_audit_primary_auth == ConnAuditPrimaryAuth::TemporaryPassword {
-                log::debug!(
-                    "temp-password: skip close rotation (consumed on auth) conn=#{}",
-                    id
-                );
-            } else {
-                password::update_temporary_password();
-                log::debug!("temp-password: rotated on close conn=#{}", id);
-            }
+        if conn.authorized
+            && conn.conn_audit_primary_auth != ConnAuditPrimaryAuth::TemporaryPassword
+        {
+            password::update_temporary_password();
         }
         if let Err(err) = conn.try_port_forward_loop(&mut rx_from_cm).await {
             conn.on_close(&err.to_string(), false).await;
@@ -2269,38 +2263,24 @@ impl Connection {
     }
 
     /// Validates the current temporary password and rotates it on success (single-use).
-    fn consume_temporary_password_if_valid(&self) -> Option<String> {
-        use std::sync::Once;
-        static BUILD_MARKER: Once = Once::new();
-        BUILD_MARKER.call_once(|| {
-            log::info!("temp-password: single-use consume active (build marker)");
-        });
-
+    fn consume_temporary_password_if_valid(&self) -> bool {
         let mut lock = password::TEMPORARY_PASSWORD.write().unwrap();
         let current = lock.clone();
         if current.is_empty() || !self.validate_password_plain(&current) {
-            return None;
+            return false;
         }
-        let consumed = current;
         let len = password::temporary_password_length();
         *lock = if Config::get_bool_option(keys::OPTION_ALLOW_NUMERNIC_ONE_TIME_PASSWORD) {
             Config::get_auto_numeric_password(len)
         } else {
             Config::get_auto_password(len)
         };
-        log::info!(
-            "temp-password: consumed and rotated conn=#{} peer={} ip={} new_len={}",
-            self.inner.id(),
-            self.lr.my_id,
-            self.ip,
-            lock.len(),
-        );
-        Some(consumed)
+        true
     }
 
     fn validate_password(&mut self, allow_permanent_password: bool) -> bool {
         if password::temporary_enabled() {
-            if self.consume_temporary_password_if_valid().is_some() {
+            if self.consume_temporary_password_if_valid() {
                 self.set_conn_audit_primary_auth(ConnAuditPrimaryAuth::TemporaryPassword);
                 // Do not cache the consumed password; otherwise is_recent_session would
                 // allow another connection with the same old password while this session lives.
@@ -2311,14 +2291,6 @@ impl Connection {
                 );
                 self.check_update_temporary_password(true);
                 return true;
-            } else if !self.lr.password.is_empty() {
-                log::info!(
-                    "temp-password: login rejected conn=#{} peer={} ip={} active_len={}",
-                    self.inner.id(),
-                    self.lr.my_id,
-                    self.ip,
-                    password::temporary_password().len(),
-                );
             }
         }
         if password::permanent_enabled() || allow_permanent_password {
