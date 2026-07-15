@@ -27,7 +27,7 @@ jobs:
         run: ./native.sh --skip-deps
       - name: Read version from version.properties
         run: |
-          VERSION_NAME=`grep '^version =' Cargo.toml | head -1 | cut -d'"' -f2`
+          VERSION_NAME=`grep '^version =' Cargo.toml | head -1 | cut -d'"' -f2 | tr '+' '.'`
           echo "Version to be published: $VERSION_NAME"
           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
       - name: Publish artifact
