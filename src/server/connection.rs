@@ -2300,11 +2300,13 @@ impl Connection {
 
     fn validate_password(&mut self, allow_permanent_password: bool) -> bool {
         if password::temporary_enabled() {
-            if let Some(password) = self.consume_temporary_password_if_valid() {
+            if self.consume_temporary_password_if_valid().is_some() {
                 self.set_conn_audit_primary_auth(ConnAuditPrimaryAuth::TemporaryPassword);
+                // Do not cache the consumed password; otherwise is_recent_session would
+                // allow another connection with the same old password while this session lives.
                 raii::AuthedConnID::update_or_insert_session(
                     self.session_key(),
-                    Some(password),
+                    None,
                     Some(false),
                 );
                 self.check_update_temporary_password(true);
