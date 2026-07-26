@@ -2384,6 +2384,15 @@ impl Connection {
         false
     }
 
+    /// Allow a parallel file-transfer login when remote desktop is already authorized
+    /// for the same client session key (single-use temp password already consumed).
+    fn can_auth_file_transfer_via_active_remote(&self) -> bool {
+        if self.file_transfer.is_none() || self.lr.session_id == 0 {
+            return false;
+        }
+        raii::AuthedConnID::has_authed_remote_for_session(&self.session_key())
+    }
+
     #[inline]
     pub fn is_permission_enabled_locally(enable_prefix_option: &str) -> bool {
         #[cfg(feature = "flutter")]
@@ -2709,6 +2718,23 @@ impl Connection {
                 }
                 return true;
             } else if self.is_recent_session(false) {
+                if err_msg.is_empty() {
+                    #[cfg(target_os = "linux")]
+                    self.linux_headless_handle.wait_desktop_cm_ready().await;
+                    if !self.send_logon_response_and_keep_alive().await {
+                        return false;
+                    }
+                    self.try_start_cm(lr.my_id.clone(), lr.my_name.clone(), self.authorized);
+                } else {
+                    self.send_login_error(err_msg).await;
+                }
+            } else if self.can_auth_file_transfer_via_active_remote() {
+                self.set_conn_audit_primary_auth(ConnAuditPrimaryAuth::TemporaryPassword);
+                log::info!(
+                    "file transfer sibling auth for session {} from {}",
+                    self.lr.session_id,
+                    self.lr.my_id
+                );
                 if err_msg.is_empty() {
                     #[cfg(target_os = "linux")]
                     self.linux_headless_handle.wait_desktop_cm_ready().await;
@@ -6545,6 +6571,12 @@ mod raii {
                 .count()
         }
 
+        pub fn has_authed_remote_for_session(session_key: &SessionKey) -> bool {
+            AUTHED_CONNS.lock().unwrap().iter().any(|c| {
+                c.conn_type == AuthConnType::Remote && c.session_key == *session_key
+            })
+        }
+
         pub fn check_remove_session(conn_id: i32, key: SessionKey) {
             let mut lock = SESSIONS.lock().unwrap();
             let contains = lock.contains_key(&key);
@@ -7054,5 +7086,33 @@ mod test {
             scoped.terminal_persistent.enum_value(),
             Ok(BoolOption::NotSet)
         );
+    }
+
+    #[test]
+    fn has_authed_remote_for_session_detects_sibling_file_transfer() {
+        use hbb_common::tokio::sync::mpsc;
+
+        let key = SessionKey {
+            peer_id: "web".into(),
+            name: "web".into(),
+            session_id: 4242,
+        };
+        let other_key = SessionKey {
+            session_id: 9999,
+            ..key.clone()
+        };
+        let (tx, _rx) = mpsc::unbounded_channel();
+        AUTHED_CONNS.lock().unwrap().push(AuthedConn {
+            conn_id: 9001,
+            conn_type: AuthConnType::Remote,
+            session_key: key.clone(),
+            sender: tx,
+            printer: false,
+        });
+
+        assert!(super::raii::AuthedConnID::has_authed_remote_for_session(&key));
+        assert!(!super::raii::AuthedConnID::has_authed_remote_for_session(&other_key));
+
+        AUTHED_CONNS.lock().unwrap().retain(|c| c.conn_id != 9001);
     }
 }
