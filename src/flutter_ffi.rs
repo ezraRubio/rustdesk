@@ -3093,6 +3093,10 @@ pub mod server_side {
                 crate::read_custom_client(&custom_client_config);
             }
         }
+        if config::APP_HOME_DIR.read().unwrap().is_empty() {
+            log::info!("startServer: defaulting APP_HOME_DIR to /storage/emulated/0");
+            super::main_set_home_dir("/storage/emulated/0".to_owned());
+        }
         std::thread::spawn(move || start_server(true));
     }
 
