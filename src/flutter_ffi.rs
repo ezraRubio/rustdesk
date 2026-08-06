@@ -3204,7 +3204,7 @@ pub mod server_side {
 
     pub unsafe extern "system" fn Java_ffi_FFI_setDeviceName(env: JNIEnv, _class: JClass, name: JString) {
         if let Ok(s) = env.get_string(&name) {
-            main_device_name(s.into());
+            super::main_device_name(s.into());
         }
     }
 }
