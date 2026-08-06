@@ -3201,4 +3201,10 @@ pub mod server_side {
         let status = super::main_get_connect_status();
         return env.new_string(status).unwrap_or_default().into_raw();
     }
+
+    pub unsafe extern "system" fn Java_ffi_FFI_setDeviceName(env: JNIEnv, _class: JClass, name: JString) {
+        if let Ok(s) = env.get_string(&name) {
+            main_device_name(s.into());
+        }
+    }
 }
