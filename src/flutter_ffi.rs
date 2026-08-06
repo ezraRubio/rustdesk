@@ -3202,6 +3202,7 @@ pub mod server_side {
         return env.new_string(status).unwrap_or_default().into_raw();
     }
 
+    #[no_mangle]
     pub unsafe extern "system" fn Java_ffi_FFI_setDeviceName(env: JNIEnv, _class: JClass, name: JString) {
         let mut env = env;
         if let Ok(s) = env.get_string(&name) {
