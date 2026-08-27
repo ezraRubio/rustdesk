@@ -317,12 +317,13 @@ async fn create_relay_connection_(
     uuid: String,
     peer_addr: SocketAddr,
     secure: bool,
-    ipv4: bool,
+    _ipv4: bool,
     meta: ConnectionMeta,
 ) -> ResultType<()> {
-    let mut stream = socket_client::connect_tcp(
-        socket_client::ipv4_to_ipv6(crate::check_port(relay_server, RELAY_PORT), ipv4),
+    let mut stream = crate::common::fort_connect_tcp(
+        crate::check_port(relay_server, RELAY_PORT),
         CONNECT_TIMEOUT,
+        true,
     )
     .await?;
     let mut msg_out = RendezvousMessage::new();

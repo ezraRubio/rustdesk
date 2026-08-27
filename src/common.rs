@@ -17,8 +17,10 @@ use hbb_common::{
     bail, base64,
     bytes::Bytes,
     config::{
-        self, keys, use_ws, Config, LocalConfig, CONNECT_TIMEOUT, READ_TIMEOUT, RENDEZVOUS_PORT,
+        self, keys, keys::OPTION_RELAY_SERVER, use_ws, Config, LocalConfig, CONNECT_TIMEOUT,
+        READ_TIMEOUT, RELAY_PORT, RENDEZVOUS_PORT,
     },
+    websocket,
     futures::future::join_all,
     futures_util::future::poll_fn,
     get_version_number, log,
@@ -908,6 +910,22 @@ pub fn check_port<T: std::string::ToString>(host: T, port: i32) -> String {
 #[inline]
 pub fn increase_port<T: std::string::ToString>(host: T, offset: i32) -> String {
     hbb_common::socket_client::increase_port(host, offset)
+}
+
+pub fn fort_ws_target(endpoint: &str, is_relay: bool) -> String {
+    let path = if is_relay { "/ws/relay" } else { "/ws/id" };
+    let Some((host, endpoint_port)) = socket_client::split_host_port(&endpoint) else {
+        return format!("wss://{}:{}{}", endpoint, "443", "/ws/id");
+    };
+    format!("wss://{}:{}{}", host, endpoint_port, path)
+}
+
+pub async fn fort_connect_tcp(target: impl AsRef<str>, ms_timeout: u64, is_relay: bool) -> ResultType<Stream> {
+    let target_str = fort_ws_target(target.as_ref(), is_relay);
+    log::debug!("fort_connect_tcp: {}", target_str);
+    Ok(Stream::WebSocket(
+        websocket::WsFramedStream::new(target_str, None, None, ms_timeout).await?,
+    ))
 }
 
 pub const POSTFIX_SERVICE: &'static str = "_service";

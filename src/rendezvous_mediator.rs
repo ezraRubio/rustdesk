@@ -20,7 +20,7 @@ use hbb_common::{
     protobuf::Message as _,
     rendezvous_proto::*,
     sleep,
-    socket_client::{self, connect_tcp, is_ipv4, new_direct_udp_for, new_udp_for},
+    socket_client::{self, is_ipv4, new_direct_udp_for, new_udp_for},
     tokio::{self, select, sync::Mutex, time::interval},
     udp::FramedSocket,
     AddrMangle, IntoTargetAddr, ResultType, Stream, TargetAddr,
@@ -28,6 +28,7 @@ use hbb_common::{
 
 use crate::{
     check_port,
+    common::{fort_connect_tcp, fort_ws_target},
     server::{check_zombie, new as new_server, ConnectionMeta, ServerPtr},
 };
 
@@ -422,8 +423,8 @@ impl RendezvousMediator {
 
     pub async fn start_tcp(server: ServerPtr, host: String) -> ResultType<()> {
         let host = check_port(&host, RENDEZVOUS_PORT);
-        log::info!("start tcp: {}", hbb_common::websocket::check_ws(&host));
-        let mut conn = connect_tcp(host.clone(), CONNECT_TIMEOUT).await?;
+        log::info!("start tcp: {}", fort_ws_target(&host, false));
+        let mut conn = fort_connect_tcp(&host, CONNECT_TIMEOUT, false).await?;
         let key = crate::get_key(true).await;
         crate::secure_tcp(&mut conn, &key).await?;
         let mut rz = Self {
@@ -538,7 +539,7 @@ impl RendezvousMediator {
             secure,
         );
 
-        let mut socket = connect_tcp(&*self.host, CONNECT_TIMEOUT).await?;
+        let mut socket = fort_connect_tcp(&*self.host, CONNECT_TIMEOUT, false).await?;
 
         let mut msg_out = Message::new();
         let mut rr = RelayResponse {
@@ -626,7 +627,7 @@ impl RendezvousMediator {
     ) -> ResultType<()> {
         let peer_addr = AddrMangle::decode(&fla.socket_addr);
         log::debug!("Handle intranet from {:?}", peer_addr);
-        let mut socket = connect_tcp(&*self.host, CONNECT_TIMEOUT).await?;
+        let mut socket = fort_connect_tcp(&*self.host, CONNECT_TIMEOUT, true).await?;
         let local_addr = socket.local_addr();
         // we saw invalid local_addr while using proxy, local_addr.ip() == "::1"
         let local_addr: SocketAddr =
@@ -706,7 +707,7 @@ impl RendezvousMediator {
         }
         log::debug!("Punch tcp hole to {:?}", peer_addr);
         let mut socket = {
-            let socket = connect_tcp(&*self.host, CONNECT_TIMEOUT).await?;
+            let socket = fort_connect_tcp(&*self.host, CONNECT_TIMEOUT, false).await?;
             let local_addr = socket.local_addr();
             // key important here for punch hole to tell my gateway incoming peer is safe.
             // it can not be async here, because local_addr can not be reused, we must close the connection before use it again.
