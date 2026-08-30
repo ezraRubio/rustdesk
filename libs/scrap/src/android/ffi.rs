@@ -187,13 +187,12 @@ pub extern "system" fn Java_ffi_FFI_setFrameRawEnable(
     };
 }
 
+pub fn java_vm() -> Option<JavaVM> {
+    JVM.read().ok()?.clone()
+}
+
 #[no_mangle]
 pub extern "system" fn Java_ffi_FFI_init(env: JNIEnv, _class: JClass, ctx: JObject) {
-    android_logger::init_once(
-        android_logger::Config::default()
-            .with_max_level(log::LevelFilter::Debug)
-            .with_tag("rust"),
-    );
     if let Ok(jvm) = env.get_java_vm() {
         let java_vm = jvm.get_java_vm_pointer() as *mut c_void;
         let mut jvm_lock = JVM.write().unwrap();
@@ -494,18 +493,44 @@ pub extern "C" fn JNI_OnLoad(vm: jni::JavaVM, res: *mut std::os::raw::c_void) ->
 }
 
 #[no_mangle]
-pub extern "system" fn Java_ffi_FFI_onAppStart(mut env: JNIEnv, _class: JClass, ctx: JObject) {
+pub extern "system" fn Java_ffi_FFI_onAppStart(
+    mut env: JNIEnv,
+    _class: JClass,
+    ctx: JObject,
+    dev_mode: jboolean,
+    log_bridge_class: JString,
+) {
     if ctx.is_null() {
         log::error!("application context is null");
         return;
     }
-    if APPLICATION_CONTEXT.read().unwrap().is_some() {
-        log::info!("application context already initialized");
-        return;
-    }
+
+    let dev_mode = dev_mode != 0;
+    let bridge_class = env
+        .get_string(&log_bridge_class)
+        .ok()
+        .map(|s| s.into())
+        .filter(|s: &String| !s.is_empty());
+
     if let Ok(jvm) = env.get_java_vm() {
+        let mut jvm_lock = JVM.write().unwrap();
+        if jvm_lock.is_none() {
+            *jvm_lock = Some(jvm.clone());
+        }
+        drop(jvm_lock);
+
+        super::log_bridge::init_android_logging_with_context(
+            &mut env,
+            &ctx,
+            dev_mode,
+            bridge_class.as_deref(),
+        );
+
+        if APPLICATION_CONTEXT.read().unwrap().is_some() {
+            log::info!("application context already initialized");
+            return;
+        }
         if let Ok(context) = env.new_global_ref(ctx) {
-            let java_vm = jvm.get_java_vm_pointer() as *mut c_void;
             let context_jobject = context.as_obj().as_raw() as *mut c_void;
             *APPLICATION_CONTEXT.write().unwrap() = Some(context);
             try_init_rustls_platform_verifier(&mut env, context_jobject);
