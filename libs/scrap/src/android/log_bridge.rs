@@ -58,19 +58,21 @@ fn call_log_bridge(priority: AndroidLogPriority, message: &str) -> Result<(), ()
         .map_err(|_| ())?
         .clone()
         .ok_or(())?;
-    let jvm = super::ffi::java_vm().ok_or(())?;
-    let mut env = jvm.attach_current_thread().map_err(|_| ())?;
-    let class_path = class_name.replace('.', "/");
-    let class = env.find_class(&class_path).map_err(|_| ())?;
-    let msg = env.new_string(message).map_err(|_| ())?;
-    env.call_static_method(
-        class,
-        "log",
-        "(ILjava/lang/String;)V",
-        &[JValue::Int(priority as i32), JValue::Object(&msg)],
-    )
-    .map_err(|_| ())?;
-    Ok(())
+    super::ffi::with_java_vm(|jvm| {
+        let mut env = jvm.attach_current_thread().map_err(|_| ())?;
+        let class_path = class_name.replace('.', "/");
+        let class = env.find_class(&class_path).map_err(|_| ())?;
+        let msg = env.new_string(message).map_err(|_| ())?;
+        env.call_static_method(
+            class,
+            "log",
+            "(ILjava/lang/String;)V",
+            &[JValue::Int(priority as i32), JValue::Object(&msg)],
+        )
+        .map_err(|_| ())?;
+        Ok(())
+    })
+    .ok_or(())?
 }
 
 fn write_crash_report_sync(report: &str) {

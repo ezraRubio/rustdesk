@@ -187,8 +187,11 @@ pub extern "system" fn Java_ffi_FFI_setFrameRawEnable(
     };
 }
 
-pub fn java_vm() -> Option<JavaVM> {
-    JVM.read().ok().and_then(|guard| *guard)
+pub fn with_java_vm<F, R>(f: F) -> Option<R>
+where
+    F: FnOnce(&JavaVM) -> R,
+{
+    JVM.read().ok()?.as_ref().map(f)
 }
 
 #[no_mangle]
