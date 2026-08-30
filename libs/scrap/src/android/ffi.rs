@@ -188,7 +188,7 @@ pub extern "system" fn Java_ffi_FFI_setFrameRawEnable(
 }
 
 pub fn java_vm() -> Option<JavaVM> {
-    JVM.read().ok()?.clone()
+    JVM.read().ok().and_then(|guard| *guard)
 }
 
 #[no_mangle]
@@ -216,7 +216,6 @@ pub extern "system" fn Java_ffi_FFI_setClipboardManager(
 ) {
     log::debug!("ClipboardManager init from java");
     if let Ok(jvm) = env.get_java_vm() {
-        let java_vm = jvm.get_java_vm_pointer() as *mut c_void;
         let mut jvm_lock = JVM.write().unwrap();
         if jvm_lock.is_none() {
             *jvm_lock = Some(jvm);
@@ -485,7 +484,7 @@ fn try_init_rustls_platform_verifier(env: &mut JNIEnv, context_jobject: *mut c_v
 // https://cjycode.com/flutter_rust_bridge/guides/how-to/ndk-init
 #[no_mangle]
 pub extern "C" fn JNI_OnLoad(vm: jni::JavaVM, res: *mut std::os::raw::c_void) -> jni::sys::jint {
-    if let Ok(env) = vm.get_env() {
+    if vm.get_env().is_ok() {
         let vm = vm.get_java_vm_pointer() as *mut std::os::raw::c_void;
         init_ndk_context(vm, res);
     }
@@ -515,7 +514,7 @@ pub extern "system" fn Java_ffi_FFI_onAppStart(
     if let Ok(jvm) = env.get_java_vm() {
         let mut jvm_lock = JVM.write().unwrap();
         if jvm_lock.is_none() {
-            *jvm_lock = Some(jvm.clone());
+            *jvm_lock = Some(jvm);
         }
         drop(jvm_lock);
 

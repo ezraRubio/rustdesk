@@ -1,3 +1,4 @@
+use hbb_common::libc;
 use jni::objects::{JObject, JString, JValue};
 use jni::JNIEnv;
 use log::{Level, LevelFilter, Log, Metadata, Record};
@@ -44,11 +45,7 @@ impl Log for JniLogger {
             return;
         }
         let priority = AndroidLogPriority::from(record.level());
-        let message = if let Some(err) = record.err() {
-            format!("{}: {}", record.args(), err)
-        } else {
-            format!("{}", record.args())
-        };
+        let message = format!("{}", record.args());
         let _ = call_log_bridge(priority, &message);
     }
 
@@ -124,7 +121,8 @@ fn prepare_crash_report_file(env: &mut JNIEnv, ctx: &JObject) {
     let Ok(path_jstr) = path_obj.l() else {
         return;
     };
-    let Ok(path) = env.get_string(&JString::from(path_jstr)) else {
+    let path_jstring = JString::from(path_jstr);
+    let Ok(path) = env.get_string(&path_jstring) else {
         return;
     };
     let path: String = path.into();
