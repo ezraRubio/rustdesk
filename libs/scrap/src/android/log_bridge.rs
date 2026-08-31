@@ -1,6 +1,5 @@
 use hbb_common::libc;
-use jni::objects::{GlobalRef, JClass, JObject, JString, JValue};
-use jni::sys::jmethodID;
+use jni::objects::{GlobalRef, JObject, JString, JValue};
 use jni::JNIEnv;
 use log::{Level, LevelFilter, Log, Metadata, Record};
 use std::fs::OpenOptions;
@@ -30,7 +29,6 @@ impl From<Level> for AndroidLogPriority {
 
 struct LogBridgeCache {
     class: GlobalRef,
-    log_method: jmethodID,
 }
 
 static LOGGING_INIT: Once = Once::new();
@@ -98,12 +96,6 @@ fn cache_log_bridge(env: &mut JNIEnv, ctx: &JObject, class_name: &str) -> Result
         })?;
     clear_exception(env);
 
-    let class = JClass::from(class_obj);
-    let log_method = env
-        .get_static_method_id(class, "log", "(ILjava/lang/String;)V")
-        .map_err(|_| {
-            clear_exception(env);
-        })?;
     let global = env.new_global_ref(class_obj).map_err(|_| {
         clear_exception(env);
     })?;
@@ -111,10 +103,7 @@ fn cache_log_bridge(env: &mut JNIEnv, ctx: &JObject, class_name: &str) -> Result
     LOG_BRIDGE_CACHE
         .write()
         .map_err(|_| ())?
-        .replace(LogBridgeCache {
-            class: global,
-            log_method,
-        });
+        .replace(LogBridgeCache { class: global });
     Ok(())
 }
 
@@ -126,21 +115,16 @@ fn call_log_bridge(priority: AndroidLogPriority, message: &str) -> Result<(), ()
         let cache = LOG_BRIDGE_CACHE.read().map_err(|_| ())?;
         let cache = cache.as_ref().ok_or(())?;
 
-        let class = JClass::from(cache.class.as_obj());
         let msg = env.new_string(message).map_err(|_| ())?;
-
-        let result = unsafe {
-            env.call_static_method_unchecked(
-                class,
-                cache.log_method,
-                "(ILjava/lang/String;)V",
-                &[JValue::Int(priority as i32), JValue::Object(&msg)],
-            )
-        };
-        if result.is_err() {
+        env.call_static_method(
+            &cache.class,
+            "log",
+            "(ILjava/lang/String;)V",
+            &[JValue::Int(priority as i32), JValue::Object(&msg)],
+        )
+        .map_err(|_| {
             clear_exception(&mut env);
-            return Err(());
-        }
+        })?;
         Ok(())
     })
     .ok_or(())?
@@ -239,12 +223,7 @@ pub fn init_android_logging_with_context(
                     .with_max_level(LevelFilter::Debug)
                     .with_tag("rust"),
             );
-        } else if LOG_BRIDGE_CACHE
-            .read()
-            .ok()
-            .and_then(|guard| guard.as_ref())
-            .is_some()
-        {
+        } else if matches!(LOG_BRIDGE_CACHE.read(), Ok(Some(_))) {
             let _ = log::set_boxed_logger(Box::new(JniLogger));
             log::set_max_level(LevelFilter::Info);
         } else {
