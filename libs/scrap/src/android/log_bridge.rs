@@ -1,11 +1,6 @@
-use hbb_common::libc;
 use jni::objects::{GlobalRef, JObject, JString, JValue};
 use jni::JNIEnv;
 use log::{Level, LevelFilter, Log, Metadata, Record};
-use std::fs::OpenOptions;
-use std::io::Write;
-use std::os::unix::io::AsRawFd;
-use std::path::PathBuf;
 use std::sync::{Once, RwLock};
 
 #[repr(i32)]
@@ -33,10 +28,7 @@ struct LogBridgeCache {
 
 static LOGGING_INIT: Once = Once::new();
 static LOG_BRIDGE_CACHE_INIT: Once = Once::new();
-static CRASH_FILE_INIT: Once = Once::new();
 static LOG_BRIDGE_CACHE: RwLock<Option<LogBridgeCache>> = RwLock::new(None);
-static CRASH_REPORT_PATH: RwLock<Option<PathBuf>> = RwLock::new(None);
-static CRASH_REPORT_FD: RwLock<Option<i32>> = RwLock::new(None);
 
 struct JniLogger;
 
@@ -130,78 +122,6 @@ fn call_log_bridge(priority: AndroidLogPriority, message: &str) -> Result<(), ()
     .ok_or(())?
 }
 
-fn write_crash_report_sync(report: &str) {
-    if let Ok(fd_guard) = CRASH_REPORT_FD.read() {
-        if let Some(fd) = *fd_guard {
-            let bytes = report.as_bytes();
-            let _ = unsafe {
-                libc::write(fd, bytes.as_ptr() as *const libc::c_void, bytes.len())
-            };
-            return;
-        }
-    }
-    if let Ok(path_guard) = CRASH_REPORT_PATH.read() {
-        if let Some(path) = path_guard.as_ref() {
-            let _ = OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(path)
-                .and_then(|mut file| file.write_all(report.as_bytes()));
-        }
-    }
-}
-
-fn install_panic_hook() {
-    std::panic::set_hook(Box::new(|info| {
-        let backtrace = std::backtrace::Backtrace::force_capture();
-        let report = format!("Rust panic: {info}\n{backtrace}");
-        write_crash_report_sync(&report);
-    }));
-}
-
-fn prepare_crash_report_file(env: &mut JNIEnv, ctx: &JObject) {
-    let Ok(files_dir) = env.call_method(ctx, "getFilesDir", "()Ljava/io/File;", &[]) else {
-        return;
-    };
-    let files_dir = match files_dir.l() {
-        Ok(obj) => obj,
-        Err(_) => return,
-    };
-    let Ok(path_obj) = env.call_method(
-        files_dir,
-        "getAbsolutePath",
-        "()Ljava/lang/String;",
-        &[],
-    ) else {
-        return;
-    };
-    let Ok(path_jstr) = path_obj.l() else {
-        return;
-    };
-    let path_jstring = JString::from(path_jstr);
-    let Ok(path) = env.get_string(&path_jstring) else {
-        return;
-    };
-    let path: String = path.into();
-    let logs_dir = PathBuf::from(path).join("logs");
-    let _ = std::fs::create_dir_all(&logs_dir);
-    let crash_path = logs_dir.join("pending_native_crash.txt");
-    if let Ok(file) = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&crash_path)
-    {
-        let fd = file.as_raw_fd();
-        if let Ok(mut fd_guard) = CRASH_REPORT_FD.write() {
-            *fd_guard = Some(fd);
-        }
-        if let Ok(mut path_guard) = CRASH_REPORT_PATH.write() {
-            *path_guard = Some(crash_path);
-        }
-        std::mem::forget(file);
-    }
-}
-
 pub fn init_android_logging_with_context(
     env: &mut JNIEnv,
     ctx: &JObject,
@@ -223,7 +143,7 @@ pub fn init_android_logging_with_context(
                     .with_max_level(LevelFilter::Debug)
                     .with_tag("rust"),
             );
-        } else if matches!(LOG_BRIDGE_CACHE.read(), Ok(Some(_))) {
+        } else if LOG_BRIDGE_CACHE.read().is_ok_and(|guard| guard.is_some()) {
             let _ = log::set_boxed_logger(Box::new(JniLogger));
             log::set_max_level(LevelFilter::Info);
         } else {
@@ -233,8 +153,5 @@ pub fn init_android_logging_with_context(
                     .with_tag("rust"),
             );
         }
-        install_panic_hook();
     });
-
-    CRASH_FILE_INIT.call_once(|| prepare_crash_report_file(env, ctx));
 }
