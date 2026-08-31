@@ -1,5 +1,6 @@
 use hbb_common::libc;
-use jni::objects::{JObject, JString, JValue};
+use jni::objects::{GlobalRef, JClass, JObject, JString, JValue};
+use jni::sys::jmethodID;
 use jni::JNIEnv;
 use log::{Level, LevelFilter, Log, Metadata, Record};
 use std::fs::OpenOptions;
@@ -27,9 +28,15 @@ impl From<Level> for AndroidLogPriority {
     }
 }
 
+struct LogBridgeCache {
+    class: GlobalRef,
+    log_method: jmethodID,
+}
+
 static LOGGING_INIT: Once = Once::new();
+static LOG_BRIDGE_CACHE_INIT: Once = Once::new();
 static CRASH_FILE_INIT: Once = Once::new();
-static LOG_BRIDGE_CLASS: RwLock<Option<String>> = RwLock::new(None);
+static LOG_BRIDGE_CACHE: RwLock<Option<LogBridgeCache>> = RwLock::new(None);
 static CRASH_REPORT_PATH: RwLock<Option<PathBuf>> = RwLock::new(None);
 static CRASH_REPORT_FD: RwLock<Option<i32>> = RwLock::new(None);
 
@@ -52,24 +59,88 @@ impl Log for JniLogger {
     fn flush(&self) {}
 }
 
-fn call_log_bridge(priority: AndroidLogPriority, message: &str) -> Result<(), ()> {
-    let class_name = LOG_BRIDGE_CLASS
-        .read()
+fn clear_exception(env: &mut JNIEnv) {
+    if env.exception_check().unwrap_or(false) {
+        let _ = env.exception_clear();
+    }
+}
+
+fn cache_log_bridge(env: &mut JNIEnv, ctx: &JObject, class_name: &str) -> Result<(), ()> {
+    clear_exception(env);
+
+    let loader = env
+        .call_method(ctx, "getClassLoader", "()Ljava/lang/ClassLoader;", &[])
+        .map_err(|_| {
+            clear_exception(env);
+        })?
+        .l()
+        .map_err(|_| {
+            clear_exception(env);
+        })?;
+    clear_exception(env);
+
+    let name = env.new_string(class_name).map_err(|_| {
+        clear_exception(env);
+    })?;
+    let class_obj = env
+        .call_method(
+            loader,
+            "loadClass",
+            "(Ljava/lang/String;)Ljava/lang/Class;",
+            &[JValue::Object(&name)],
+        )
+        .map_err(|_| {
+            clear_exception(env);
+        })?
+        .l()
+        .map_err(|_| {
+            clear_exception(env);
+        })?;
+    clear_exception(env);
+
+    let class = JClass::from(class_obj);
+    let log_method = env
+        .get_static_method_id(class, "log", "(ILjava/lang/String;)V")
+        .map_err(|_| {
+            clear_exception(env);
+        })?;
+    let global = env.new_global_ref(class_obj).map_err(|_| {
+        clear_exception(env);
+    })?;
+
+    LOG_BRIDGE_CACHE
+        .write()
         .map_err(|_| ())?
-        .clone()
-        .ok_or(())?;
+        .replace(LogBridgeCache {
+            class: global,
+            log_method,
+        });
+    Ok(())
+}
+
+fn call_log_bridge(priority: AndroidLogPriority, message: &str) -> Result<(), ()> {
     super::ffi::with_java_vm(|jvm| {
         let mut env = jvm.attach_current_thread().map_err(|_| ())?;
-        let class_path = class_name.replace('.', "/");
-        let class = env.find_class(&class_path).map_err(|_| ())?;
+        clear_exception(&mut env);
+
+        let cache = LOG_BRIDGE_CACHE.read().map_err(|_| ())?;
+        let cache = cache.as_ref().ok_or(())?;
+
+        let class = JClass::from(cache.class.as_obj());
         let msg = env.new_string(message).map_err(|_| ())?;
-        env.call_static_method(
-            class,
-            "log",
-            "(ILjava/lang/String;)V",
-            &[JValue::Int(priority as i32), JValue::Object(&msg)],
-        )
-        .map_err(|_| ())?;
+
+        let result = unsafe {
+            env.call_static_method_unchecked(
+                class,
+                cache.log_method,
+                "(ILjava/lang/String;)V",
+                &[JValue::Int(priority as i32), JValue::Object(&msg)],
+            )
+        };
+        if result.is_err() {
+            clear_exception(&mut env);
+            return Err(());
+        }
         Ok(())
     })
     .ok_or(())?
@@ -153,6 +224,14 @@ pub fn init_android_logging_with_context(
     dev_mode: bool,
     log_bridge_class: Option<&str>,
 ) {
+    if !dev_mode {
+        if let Some(class) = log_bridge_class.filter(|s| !s.is_empty()) {
+            LOG_BRIDGE_CACHE_INIT.call_once(|| {
+                let _ = cache_log_bridge(env, ctx, class);
+            });
+        }
+    }
+
     LOGGING_INIT.call_once(|| {
         if dev_mode {
             android_logger::init_once(
@@ -160,10 +239,12 @@ pub fn init_android_logging_with_context(
                     .with_max_level(LevelFilter::Debug)
                     .with_tag("rust"),
             );
-        } else if let Some(class) = log_bridge_class.filter(|s| !s.is_empty()) {
-            if let Ok(mut guard) = LOG_BRIDGE_CLASS.write() {
-                *guard = Some(class.to_owned());
-            }
+        } else if LOG_BRIDGE_CACHE
+            .read()
+            .ok()
+            .and_then(|guard| guard.as_ref())
+            .is_some()
+        {
             let _ = log::set_boxed_logger(Box::new(JniLogger));
             log::set_max_level(LevelFilter::Info);
         } else {
